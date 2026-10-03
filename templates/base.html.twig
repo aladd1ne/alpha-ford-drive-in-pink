@@ -6,10 +6,19 @@
     <title>{% block title %}Drive in Pink{% endblock %} — Alpha Ford</title>
     <meta name="description" content="Drive in Pink : en octobre, chaque test drive chez Alpha Ford ajoute 30 DT à la cagnotte solidaire Octobre Rose.">
     <meta name="theme-color" content="#FFFFFF">
+    <link rel="icon" type="image/png" href="{{ asset('assets/images/favicon.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('assets/images/apple-touch-icon.png') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/front.css') }}">
+    {# Scroll animations: hide the elements to reveal before first paint; never leave them hidden (see js/scroll-animations.js) #}
+    <script>
+        if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            document.documentElement.classList.add('dp-anim');
+            setTimeout(() => { if (!window.dpAnimReady) document.documentElement.classList.remove('dp-anim'); }, 3000);
+        }
+    </script>
     {% block stylesheets %}{% endblock %}
 </head>
 <body>
@@ -39,16 +48,16 @@
     <footer class="dp-footer">
         <div class="dp-container">
             <div class="dp-footer__head">
-                <a href="{{ path('home') }}" class="dp-logo dp-logo--lg">
-                    Drive in Pink<span class="dp-logo__dot" aria-hidden="true"></span>
+                <a href="{{ path('home') }}" class="dp-logo dp-logo--img dp-logo--footer" data-reveal>
+                    <img src="{{ asset('assets/images/logo.png') }}" width="634" height="600" loading="lazy" alt="Ford Drive in Pink">
                 </a>
-                <h4 class="dp-footer__title">
+                <h4 class="dp-footer__title" data-reveal-text>
                     Alpha Ford se mobilise pour Octobre Rose.
                     <span>Chaque test drive devient un geste de soutien.</span>
                 </h4>
             </div>
 
-            <div class="dp-footer__info">
+            <div class="dp-footer__info" data-reveal-stagger>
                 <div>
                     <span class="dp-footer__label">Bénéficiaire</span>
                     <p><mark class="dp-highlight">Service de médecine et de chirurgie de l’Institut Salah Azaïez</mark></p>
@@ -59,7 +68,7 @@
                 </div>
             </div>
 
-            <div class="dp-footer__bottom">
+            <div class="dp-footer__bottom" data-reveal>
                 <p>
                     © {{ "now"|date("Y") }} Comp'pacte. Tous droits réservés.
                     <span class="dp-footer__credit">Conçu et développé par <strong>Comp'pacte</strong></span>
@@ -73,6 +82,10 @@
         </div>
     </footer>
 
+    <script src="{{ asset('js/vendor/gsap.min.js') }}" defer></script>
+    <script src="{{ asset('js/vendor/ScrollTrigger.min.js') }}" defer></script>
+    <script src="{{ asset('js/vendor/SplitText.min.js') }}" defer></script>
+    <script src="{{ asset('js/scroll-animations.js') }}" defer></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -31,15 +31,15 @@
         <div class="dp-sec-head">
             <p class="dp-subhead">Réservation</p>
             <div>
-                <h1 class="dp-sec-head__title">Choisissez votre test drive</h1>
-                <p class="dp-sec-head__text">
+                <h1 class="dp-sec-head__title" data-reveal-text>Choisissez votre test drive</h1>
+                <p class="dp-sec-head__text" data-reveal>
                     Chaque test drive réalisé et validé ajoute <strong class="dp-accent">30 DT</strong> à la cagnotte
                     solidaire au profit du <mark class="dp-highlight">service de médecine et de chirurgie de l’Institut Salah Azaïez</mark>.
                 </p>
             </div>
         </div>
 
-        <div class="dp-res-grid">
+        <div class="dp-res-grid" data-reveal-stagger>
             {% for card in cards %}
                 <article class="dp-res-card">
                     {% if car_images[card.experience] is defined %}
