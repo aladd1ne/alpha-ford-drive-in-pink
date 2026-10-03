@@ -1,0 +1,45 @@
+security:
+    password_hashers:
+        App\Entity\AdminUser:
+            algorithm: auto
+
+    providers:
+        admin_users:
+            entity:
+                class: App\Entity\AdminUser
+                property: email
+
+    firewalls:
+        dev:
+            pattern: ^/(_(profiler|wdt)|css|images|js)/
+            security: false
+
+        admin:
+            pattern: ^/admin
+            lazy: true
+            provider: admin_users
+            form_login:
+                login_path: admin_login
+                check_path: admin_login
+                enable_csrf: true
+                default_target_path: admin
+            logout:
+                path: admin_logout
+                target: admin_login
+
+        main:
+            lazy: true
+            security: false
+
+    access_control:
+        - { path: ^/admin/login, roles: PUBLIC_ACCESS }
+        - { path: ^/admin, roles: ROLE_ADMIN }
+
+when@test:
+    security:
+        password_hashers:
+            App\Entity\AdminUser:
+                algorithm: auto
+                cost: 4
+                time_cost: 3
+                memory_cost: 10

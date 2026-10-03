@@ -1,0 +1,142 @@
+{% extends 'base_legacy.html.twig' %}
+{% from 'macros/icons.html.twig' import icon %}
+
+{% block title %}{{ category.name }}{% endblock %}
+{% block body_class %}experience-page{% endblock %}
+{% block header_class %}header--overlay{% endblock %}
+
+{# Resolve hero image: URL → use directly; bare filename → prepend /images/categories/; empty → placeholder #}
+{% set heroSrc = category.heroImage
+    ? (category.heroImage starts with 'http' ? category.heroImage : asset('images/categories/' ~ category.heroImage))
+    : asset('images/categories/placeholder.svg') %}
+
+{% block body %}
+<main>
+
+    {# ── Hero ── #}
+    <section class="hero" style="background-image: url('{{ heroSrc }}')">
+        <div class="hero__overlay"></div>
+        <div class="hero__content container">
+            <p class="hero__eyebrow">Andiamo Experience</p>
+            <h1 class="hero__title">{{ category.name }}</h1>
+            <p class="hero__teaser">{{ category.teaser }}</p>
+        </div>
+    </section>
+
+    {# ── Description ── #}
+    <section class="section section--description">
+        <div class="container">
+            <p class="experience-description">{{ category.description }}</p>
+        </div>
+    </section>
+
+    {# ── Details: Highlights + Booking block ── #}
+    <section class="section section--details">
+        <div class="container details-layout">
+
+            {# Left column: highlights + included + bring #}
+            <div class="experience-info-col">
+
+                {# Highlights #}
+                {% if category.highlights|length > 0 %}
+                <div class="info-block">
+                    <h2 class="section-title">Points forts</h2>
+                    <ul class="highlights-list" role="list">
+                        {% for highlight in category.highlights %}
+                        <li class="highlight-item">
+                            <span class="highlight-icon">{{ icon(highlight.icon) }}</span>
+                            <div class="highlight-text">
+                                <span class="highlight-label">{{ highlight.label }}</span>
+                                <span class="highlight-value">{{ highlight.value }}</span>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {# What's included #}
+                {% if category.includedItems|length > 0 %}
+                <div class="info-block">
+                    <h2 class="section-title">Ce qui est inclus dans le prix</h2>
+                    <ul class="checklist" role="list">
+                        {% for item in category.includedItems %}
+                        <li class="checklist-item checklist-item--included">
+                            <span class="checklist-icon checklist-icon--included">{{ icon(item.icon, 'icon icon--sm') }}</span>
+                            <span class="checklist-label">{{ item.label }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {# What to bring #}
+                {% if category.bringItems|length > 0 %}
+                <div class="info-block">
+                    <h2 class="section-title">Ce que vous devez apporter</h2>
+                    <ul class="checklist" role="list">
+                        {% for item in category.bringItems %}
+                        <li class="checklist-item checklist-item--bring">
+                            <span class="checklist-icon checklist-icon--bring">{{ icon(item.icon, 'icon icon--sm') }}</span>
+                            <span class="checklist-label">{{ item.label }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+            </div>{# /experience-info-col #}
+
+            {# Right: price + extras + CTA #}
+            <div class="booking-block" id="booking-block">
+                <div class="price-card">
+                    <div class="price-row">
+                        <span class="price-label">À partir de</span>
+                        <div class="price-amount">
+                            <span id="base-price" data-price="{{ category.basePrice }}">{{ category.basePrice|number_format(0) }} TND</span>
+                            <span class="price-per">/ pers.</span>
+                        </div>
+                    </div>
+
+                    {% if category.extras|length > 0 %}
+                    <div class="extras-section">
+                        <h3 class="extras-title">Options</h3>
+                        {% for extra in category.extras %}
+                        <label class="extra-item" for="extra-{{ extra.id }}">
+                            <input type="checkbox"
+                                   id="extra-{{ extra.id }}"
+                                   class="extra-checkbox"
+                                   data-price="{{ extra.price }}"
+                                   data-id="{{ extra.id }}"
+                                   value="{{ extra.id }}">
+                            <span class="extra-check-icon" aria-hidden="true"></span>
+                            <span class="extra-name">{{ extra.name }}</span>
+                            <span class="extra-price">+{{ extra.price|number_format(0) }} TND</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="total-row">
+                        <span class="total-label">Total estimé</span>
+                        <span class="total-amount" id="total-price" data-base="{{ category.basePrice }}">{{ category.basePrice|number_format(0) }} TND</span>
+                    </div>
+                </div>
+
+                <a href="{{ path('booking_form', {slug: category.slug}) }}"
+                   class="btn btn--accent btn--full"
+                   id="book-now-btn">
+                    Réserver maintenant
+                </a>
+                <p class="booking-note">Acompte de {{ app_deposit_amount }} TND • Virement bancaire uniquement</p>
+            </div>
+
+        </div>
+    </section>
+
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ asset('js/price-calculator.js') }}"></script>
+{% endblock %}

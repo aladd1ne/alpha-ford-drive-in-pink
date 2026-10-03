@@ -1,0 +1,20 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Réserver mon essai{% endblock %}
+
+{% block body %}
+<main class="dp-page">
+    <div class="dp-container">
+        <div class="dp-sec-head">
+            <p class="dp-subhead">Drive in Pink</p>
+            <div>
+                <h1 class="dp-sec-head__title">Réservation de test drive</h1>
+                <p class="dp-sec-head__text">
+                    Les réservations ouvrent très bientôt. Revenez dans quelques jours pour choisir votre créneau.
+                </p>
+                <a href="{{ path('home') }}" class="dp-btn dp-btn--bord dp-btn--lg">← Retour à l’accueil</a>
+            </div>
+        </div>
+    </div>
+</main>
+{% endblock %}

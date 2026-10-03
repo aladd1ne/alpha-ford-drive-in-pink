@@ -1,0 +1,12 @@
+twig:
+    file_name_pattern: '*.twig'
+    globals:
+        app_deposit_amount: '%app.deposit_amount%'
+        app_contact_phone: '%app.contact_phone%'
+        app_bank_name: '%app.bank_name%'
+        app_bank_rib: '%app.bank_rib%'
+        app_bank_swift: '%app.bank_swift%'
+
+when@test:
+    twig:
+        strict_variables: true

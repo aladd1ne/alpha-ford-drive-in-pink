@@ -1,0 +1,133 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Drive in Pink — Test drive solidaire{% endblock %}
+
+{% block body %}
+{% set models = ['Ford Everest', 'Ford Ranger', 'Ford Territory', 'Octobre Rose', 'Test drive solidaire', '30 DT par essai'] %}
+{% set events = [
+    {
+        dates: '9 & 10 octobre',
+        day: '09—10',
+        title: 'Everest & Ranger Experience',
+        text: 'Découvrez le Ford Everest et le Ford Ranger lors de deux journées de test drive et d’animations Drive in Pink.',
+        tags: ['Ford Everest', 'Ford Ranger', 'Test drive'],
+    },
+    {
+        dates: '23 & 24 octobre',
+        day: '23—24',
+        title: 'Territory Experience',
+        text: 'Découvrez le Ford Territory lors de deux journées familiales et conviviales, avec des animations pour enfants, des moments de partage et une belle mobilisation solidaire.',
+        tags: ['Ford Territory', 'Famille', 'Animations enfants'],
+    },
+] %}
+<main>
+
+    {# ── Hero ── #}
+    <header class="dp-hero">
+        <div class="dp-container">
+            <div class="dp-hero__caption">
+                <h1 class="dp-hero__title">Drive in Pink</h1>
+                <ul class="dp-hero__pills" aria-label="Campagne">
+                    <li class="dp-pill dp-pill--p1">Test drive solidaire</li>
+                    <li class="dp-pill dp-pill--dark dp-pill--p2">Octobre Rose</li>
+                    <li class="dp-pill dp-pill--main dp-pill--p3">30 DT par essai</li>
+                    <li class="dp-pill dp-pill--p4">Alpha Ford</li>
+                </ul>
+            </div>
+
+            <div class="dp-hero__intro">
+                {# ── Fund counter ── #}
+                <section class="dp-fund" aria-label="Cagnotte solidaire">
+                    <p class="dp-subhead">Cagnotte solidaire</p>
+                    <p class="dp-fund__value">{{ fundAmount|number_format(0, ',', ' ') }}<small>DT</small></p>
+                    <ul class="dp-fund__pills">
+                        <li class="dp-pill dp-pill--tilt-l">10 DT client</li>
+                        <li class="dp-pill dp-pill--dark dp-pill--tilt-r">+ 20 DT Alpha Ford</li>
+                        <li class="dp-pill dp-pill--main dp-pill--tilt-l">= 30 DT par essai</li>
+                    </ul>
+                </section>
+
+                <div class="dp-hero__content">
+                    <h2 class="dp-hero__lead">En octobre, chaque essai devient un geste de soutien.</h2>
+                    <p class="dp-hero__text">Pour chaque test drive réalisé chez Alpha Ford&nbsp;:</p>
+                    <p class="dp-hero__formula">10 DT versés par le client + 20 DT versés par Alpha Ford</p>
+                    <p class="dp-hero__text">
+                        Soit <strong class="dp-accent">30 DT</strong> ajoutés à la cagnotte solidaire destinée à contribuer
+                        à l’acquisition de moniteurs médicaux pour le service de médecine et de chirurgie de
+                        l’Institut Salah Azaïez.
+                    </p>
+                    <a href="{{ path('reservation') }}" class="dp-btn dp-btn--main dp-btn--lg">
+                        Je réserve mon essai <span class="dp-btn__arrow" aria-hidden="true">↗</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    {# ── Marquee bands ── #}
+    <div class="dp-marq" aria-hidden="true">
+        <div class="dp-marq__band dp-marq__band--gray">
+            <div class="dp-marq__track">
+                {% for i in 1..2 %}{% for item in models %}<span class="dp-marq__item">{{ item }}</span>{% endfor %}{% endfor %}
+            </div>
+        </div>
+        <div class="dp-marq__band dp-marq__band--main">
+            <div class="dp-marq__track dp-marq__track--reverse">
+                {% for i in 1..2 %}{% for item in models|reverse %}<span class="dp-marq__item">{{ item }}</span>{% endfor %}{% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {# ── Events ── #}
+    <section class="dp-section dp-events" id="evenements">
+        <div class="dp-container">
+            <div class="dp-sec-head">
+                <p class="dp-subhead">Octobre Rose</p>
+                <div>
+                    <h2 class="dp-sec-head__title">Les rendez-vous Drive in Pink à ne pas manquer</h2>
+                    <p class="dp-sec-head__text">
+                        Venez découvrir les modèles Ford lors de deux week-ends de test drive et d’animations spéciales
+                        organisés dans le cadre d’Octobre Rose.
+                    </p>
+                </div>
+            </div>
+
+            <div class="dp-events__grid">
+                {% for event in events %}
+                    <article class="dp-event">
+                        {# Visual placeholder — swap for <img src="{{ asset('images/events/…') }}"> once photos are ready #}
+                        <div class="dp-event__img dp-event__img--{{ loop.index }}">
+                            <span class="dp-event__day" aria-hidden="true">{{ event.day }}</span>
+                            <ul class="dp-event__tags">
+                                {% for tag in event.tags %}<li>{{ tag }}</li>{% endfor %}
+                            </ul>
+                        </div>
+                        <p class="dp-event__date">{{ event.dates }}</p>
+                        <h3 class="dp-event__title">{{ event.title }}</h3>
+                        <p class="dp-event__text">{{ event.text }}</p>
+                    </article>
+                {% endfor %}
+            </div>
+
+            <div class="dp-events__note">
+                <p>
+                    Chaque test drive réalisé et validé durant ces journées, comme pendant tout le mois d’octobre,
+                    ajoute <strong class="dp-accent">30 DT</strong> à la cagnotte solidaire destinée à contribuer à
+                    l’acquisition de moniteurs médicaux pour le service de médecine et de chirurgie de l’Institut Salah Azaïez.
+                </p>
+                <a href="{{ path('reservation') }}" class="dp-btn dp-btn--main dp-btn--lg">
+                    Je réserve mon essai <span class="dp-btn__arrow" aria-hidden="true">↗</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    {# ── Big text marquee ── #}
+    <div class="dp-bigmarq" aria-hidden="true">
+        <div class="dp-marq__track">
+            {% for i in 1..4 %}<span>Drive in Pink</span><span>Octobre Rose</span>{% endfor %}
+        </div>
+    </div>
+
+</main>
+{% endblock %}

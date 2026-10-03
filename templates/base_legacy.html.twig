@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Drive in Pink{% endblock %} — Alpha Ford</title>
+    <meta name="description" content="Drive in Pink : en octobre, chaque test drive chez Alpha Ford ajoute 30 DT à la cagnotte solidaire Octobre Rose.">
+    <meta name="theme-color" content="#FFF6F9">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    {% block stylesheets %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+    <header class="site-header {% block header_class %}{% endblock %}">
+        <div class="container header-inner">
+            <a href="{{ path('home') }}" class="site-logo">
+                <span class="logo-main">DRIVE IN PINK</span>
+                <span class="logo-sub">ALPHA FORD</span>
+            </a>
+            <nav class="site-nav" aria-label="Navigation principale">
+                <a href="{{ path('home') }}" class="nav-link nav-link--secondary">Accueil</a>
+                <a href="{{ path('home') }}#evenements" class="nav-link">Événements</a>
+                <a href="{{ path('reservation') }}" class="nav-link nav-link--cta">Réserver</a>
+            </nav>
+        </div>
+    </header>
+
+    {% block body %}{% endblock %}
+
+    <footer class="site-footer" id="footer-contact">
+        <div class="container footer-grid">
+            <div class="footer-brand">
+                <span class="logo-main">DRIVE IN PINK</span>
+                <p class="footer-tagline">Alpha Ford se mobilise pour Octobre Rose.<br>Chaque test drive devient un geste de soutien.</p>
+            </div>
+            <div class="footer-contact">
+                <p class="footer-label">Une question ?</p>
+                <a href="tel:{{ app_contact_phone|replace({' ': ''}) }}" class="footer-phone">
+                    {{ app_contact_phone }}
+                </a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <div class="container">
+                <p>© {{ "now"|date("Y") }} Alpha Ford · Drive in Pink. Tous droits réservés.</p>
+            </div>
+        </div>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

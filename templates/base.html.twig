@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Drive in Pink{% endblock %} — Alpha Ford</title>
+    <meta name="description" content="Drive in Pink : en octobre, chaque test drive chez Alpha Ford ajoute 30 DT à la cagnotte solidaire Octobre Rose.">
+    <meta name="theme-color" content="#FFFFFF">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('css/front.css') }}">
+    {% block stylesheets %}{% endblock %}
+</head>
+<body>
+
+    <nav class="dp-nav" aria-label="Navigation principale">
+        <div class="dp-container dp-nav__inner">
+            <a href="{{ path('home') }}" class="dp-logo">
+                Drive in Pink<span class="dp-logo__dot" aria-hidden="true"></span>
+            </a>
+
+            <div class="dp-nav__info">
+                <span>Octobre Rose <br> test drive solidaire</span>
+                <span>Alpha Ford <br> Tunisie</span>
+            </div>
+
+            <div class="dp-nav__links">
+                <a href="{{ path('home') }}#evenements" class="dp-nav__link">Événements</a>
+                <a href="{{ path('reservation') }}" class="dp-btn dp-btn--main">
+                    Réserver <span class="dp-btn__arrow" aria-hidden="true">↗</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    {% block body %}{% endblock %}
+
+    <footer class="dp-footer">
+        <div class="dp-container">
+            <div class="dp-footer__head">
+                <a href="{{ path('home') }}" class="dp-logo dp-logo--lg">
+                    Drive in Pink<span class="dp-logo__dot" aria-hidden="true"></span>
+                </a>
+                <h4 class="dp-footer__title">
+                    Alpha Ford se mobilise pour Octobre Rose.
+                    <span>Chaque test drive devient un geste de soutien.</span>
+                </h4>
+            </div>
+
+            <div class="dp-footer__info">
+                <div>
+                    <span class="dp-footer__label">Bénéficiaire</span>
+                    <p>Institut Salah Azaïez — service de médecine et de chirurgie</p>
+                </div>
+                <div>
+                    <span class="dp-footer__label">Contact</span>
+                    <p><a href="tel:{{ app_contact_phone|replace({' ': ''}) }}">{{ app_contact_phone }}</a></p>
+                </div>
+            </div>
+
+            <div class="dp-footer__bottom">
+                <p>© {{ "now"|date("Y") }} Alpha Ford · Drive in Pink. Tous droits réservés.</p>
+                <div class="dp-footer__links">
+                    <a href="{{ path('home') }}">Accueil</a>
+                    <a href="{{ path('home') }}#evenements">Événements</a>
+                    <a href="{{ path('reservation') }}">Réserver</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

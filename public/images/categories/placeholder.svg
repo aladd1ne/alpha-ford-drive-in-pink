@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="1200" height="700">
+  <rect fill="#111111" width="1200" height="700"/>
+  <rect fill="#1A1A1A" x="480" y="270" width="240" height="160" rx="16"/>
+  <path d="M540 370 L580 320 L610 350 L630 330 L680 370 Z" fill="#2A2A2A"/>
+  <circle cx="570" cy="335" r="12" fill="#2A2A2A"/>
+  <text font-family="Inter, sans-serif" font-size="13" font-weight="600" letter-spacing="3" fill="#333333" text-anchor="middle" x="600" y="460">IMAGE À VENIR</text>
+</svg>
