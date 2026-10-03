@@ -1,70 +1,36 @@
-<!DOCTYPE html>
-<html lang="fr" data-ea-dark-scheme="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Administration — Drive in Pink</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
-    <style>
-        body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg-0); }
-        .login-wrap { width: 100%; max-width: 420px; padding: 1.5rem; }
-        .login-brand { text-align: center; margin-bottom: 2.5rem; }
-        .login-brand .logo-main { font-size: 1.4rem; letter-spacing: .18em; }
-        .login-brand .logo-sub  { font-size: .65rem; letter-spacing: .35em; }
-        .login-subtitle { font-size: .78rem; color: var(--text-3); text-align: center; margin-top: .4rem; text-transform: uppercase; letter-spacing: .15em; }
-        .login-error { background: rgba(255,80,80,.12); border: 1px solid rgba(255,80,80,.3); border-radius: var(--radius-sm); padding: .75rem 1rem; margin-bottom: 1.25rem; font-size: .88rem; color: #ff8080; }
-        .login-form { display: flex; flex-direction: column; gap: 1rem; }
-        .login-footer { text-align: center; margin-top: 1.5rem; }
-        .login-back { font-size: .8rem; color: var(--text-3); transition: color .2s; }
-        .login-back:hover { color: var(--accent); }
-    </style>
-</head>
-<body>
-    <div class="login-wrap">
-        <div class="login-brand">
-            <a href="{{ path('home') }}" style="text-decoration:none">
-                <span class="logo-main">DRIVE IN PINK</span><br>
-                <span class="logo-sub">ALPHA FORD</span>
-            </a>
-            <p class="login-subtitle">Administration</p>
-        </div>
+{% extends 'base.html.twig' %}
 
-        {% if error %}
-        <div class="login-error">
-            {{ error.messageKey|trans(error.messageData, 'security') }}
-        </div>
-        {% endif %}
+{% block title %}Administration{% endblock %}
 
-        <div class="card">
-            <form class="login-form" method="post" action="{{ path('admin_login') }}">
-                <div class="form-group">
-                    <label class="form-label" for="email">E-mail</label>
-                    <input type="email" id="email" name="_username"
-                           value="{{ last_username }}"
-                           class="form-input"
-                           autocomplete="username"
-                           required autofocus>
+{% block body %}
+<main class="dp-page">
+    <div class="dp-container">
+        <div class="dp-login">
+            <p class="dp-subhead">Administration</p>
+            <h1 class="dp-sec-head__title dp-login__title">Connexion</h1>
+
+            {% if error %}
+                <p class="dp-login__error">{{ error.messageKey|trans(error.messageData, 'security') }}</p>
+            {% endif %}
+
+            <form class="dp-form" method="post" action="{{ path('admin_login') }}">
+                <div class="dp-field">
+                    <label class="dp-label" for="email">E-mail</label>
+                    <input type="email" id="email" name="_username" value="{{ last_username }}"
+                           class="dp-input" autocomplete="username" required autofocus>
                 </div>
-                <div class="form-group">
-                    <label class="form-label" for="password">Mot de passe</label>
+                <div class="dp-field">
+                    <label class="dp-label" for="password">Mot de passe</label>
                     <input type="password" id="password" name="_password"
-                           class="form-input"
-                           autocomplete="current-password"
-                           required>
+                           class="dp-input" autocomplete="current-password" required>
                 </div>
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
-                <button type="submit" class="btn btn--accent btn--full" style="margin-top:.25rem">
-                    Se connecter
-                </button>
+                <div class="dp-form__actions">
+                    <button type="submit" class="dp-btn dp-btn--main dp-btn--lg">Se connecter</button>
+                    <a href="{{ path('home') }}" class="dp-form__back">← Retour au site</a>
+                </div>
             </form>
         </div>
-
-        <div class="login-footer">
-            <a href="{{ path('home') }}" class="login-back">← Retour au site</a>
-        </div>
     </div>
-</body>
-</html>
+</main>
+{% endblock %}

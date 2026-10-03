@@ -16,8 +16,8 @@
 
     <nav class="dp-nav" aria-label="Navigation principale">
         <div class="dp-container dp-nav__inner">
-            <a href="{{ path('home') }}" class="dp-logo">
-                Drive in Pink<span class="dp-logo__dot" aria-hidden="true"></span>
+            <a href="{{ path('home') }}" class="dp-logo dp-logo--img">
+                <img src="{{ asset('assets/images/logo-nav.png') }}" width="278" height="264" alt="Ford Drive in Pink">
             </a>
 
             <div class="dp-nav__info">
@@ -51,7 +51,7 @@
             <div class="dp-footer__info">
                 <div>
                     <span class="dp-footer__label">Bénéficiaire</span>
-                    <p>Institut Salah Azaïez — service de médecine et de chirurgie</p>
+                    <p><mark class="dp-highlight">Service de médecine et de chirurgie de l’Institut Salah Azaïez</mark></p>
                 </div>
                 <div>
                     <span class="dp-footer__label">Contact</span>
@@ -60,7 +60,10 @@
             </div>
 
             <div class="dp-footer__bottom">
-                <p>© {{ "now"|date("Y") }} Alpha Ford · Drive in Pink. Tous droits réservés.</p>
+                <p>
+                    © {{ "now"|date("Y") }} Comp'pacte. Tous droits réservés.
+                    <span class="dp-footer__credit">Conçu et développé par <strong>Comp'pacte</strong></span>
+                </p>
                 <div class="dp-footer__links">
                     <a href="{{ path('home') }}">Accueil</a>
                     <a href="{{ path('home') }}#evenements">Événements</a>

@@ -3,6 +3,10 @@ security:
         App\Entity\AdminUser:
             algorithm: auto
 
+    # A commercial validates test drives; an admin can do everything a commercial does.
+    role_hierarchy:
+        ROLE_ADMIN: [ROLE_COMMERCIAL]
+
     providers:
         admin_users:
             entity:
@@ -33,7 +37,7 @@ security:
 
     access_control:
         - { path: ^/admin/login, roles: PUBLIC_ACCESS }
-        - { path: ^/admin, roles: ROLE_ADMIN }
+        - { path: ^/admin, roles: ROLE_COMMERCIAL }
 
 when@test:
     security:
