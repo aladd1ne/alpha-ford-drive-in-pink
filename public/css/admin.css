@@ -48,3 +48,6 @@
 }
 
 .dp-admin-stat__note { margin-top: 6px; font-size: 13px; color: #6E5160; }
+
+/* Brand logo in the sidebar header (see DashboardController::configureDashboard) */
+.dp-admin-logo { height: 56px; width: auto; vertical-align: middle; }

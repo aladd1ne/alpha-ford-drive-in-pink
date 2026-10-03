@@ -38,7 +38,8 @@ class DashboardController extends AbstractDashboardController
     public function configureDashboard(): Dashboard
     {
         return Dashboard::new()
-            ->setTitle('<b>DRIVE IN PINK</b>&nbsp;<small>admin</small>')
+            ->setTitle('<img src="/assets/images/logo.png" alt="Ford Drive in Pink" class="dp-admin-logo">&nbsp;<small>admin</small>')
+            ->setFaviconPath('assets/images/favicon.png')
             ->setDefaultColorScheme(ColorScheme::LIGHT)
             ->disableDarkMode();
     }
