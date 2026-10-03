@@ -11,8 +11,13 @@ framework:
     trusted_proxies: '127.0.0.1,REMOTE_ADDR'
     trusted_headers: ['x-forwarded-for', 'x-forwarded-host', 'x-forwarded-port', 'x-forwarded-proto', 'x-forwarded-prefix']
 
+    # Sessions (which hold the CSRF tokens) live in var/ so they survive container
+    # restarts, and stay valid for 24h of inactivity instead of PHP's default 24 min —
+    # otherwise a form left open too long fails with "Le jeton CSRF est invalide".
     session:
-        handler_id: null
+        handler_id: session.handler.native_file
+        save_path: '%kernel.project_dir%/var/sessions/%kernel.environment%'
+        gc_maxlifetime: 86400
         cookie_secure: auto
         cookie_samesite: lax
 

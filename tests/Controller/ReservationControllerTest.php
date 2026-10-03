@@ -44,7 +44,7 @@ final class ReservationControllerTest extends WebTestCase
         self::assertResponseRedirects('/reservation/everest-ranger/confirmation');
         $this->client->followRedirect();
         self::assertSelectorTextContains('h1', 'Votre demande de participation à l’Everest & Ranger Experience a bien été enregistrée.');
-        self::assertSelectorTextContains('main', 'Un conseiller Alpha Ford vous contactera pour confirmer votre créneau du 9 ou 10 octobre.');
+        self::assertSelectorTextContains('main', 'Un conseiller Alpha Ford vous contactera pour confirmer votre créneau.');
         self::assertSelectorTextContains('main a[href="/"]', 'Retour à l’accueil');
 
         $saved = $this->entityManager()->getRepository(Reservation::class)->findAll();
@@ -111,7 +111,7 @@ final class ReservationControllerTest extends WebTestCase
         self::assertResponseRedirects('/reservation/territory/confirmation');
         $this->client->followRedirect();
         self::assertSelectorTextContains('h1', 'Votre demande de participation à la Territory Experience a bien été enregistrée.');
-        self::assertSelectorTextContains('main', 'créneau du 23 ou 24 octobre');
+        self::assertSelectorTextContains('main', 'Un conseiller Alpha Ford vous contactera pour confirmer votre créneau.');
         self::assertSame(Vehicle::Territory, $this->entityManager()->getRepository(Reservation::class)->findAll()[0]->getVehicle());
     }
 

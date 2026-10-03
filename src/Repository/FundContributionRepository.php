@@ -19,13 +19,29 @@ class FundContributionRepository extends ServiceEntityRepository
     }
 
     /**
-     * Total of the validated test drive contributions, in DT.
+     * Number of validated test drives and the sum of their contributions, in DT, read together
+     * so the two figures always match.
+     *
+     * @return array{count: int, amount: int, clientAmount: int, alphaFordAmount: int}
      */
-    public function sumAmounts(): int
+    public function totals(): array
     {
-        return (int) $this->createQueryBuilder('c')
-            ->select('COALESCE(SUM(c.amount), 0)')
+        /** @var array<string, int|string|null> $row */
+        $row = $this->createQueryBuilder('c')
+            ->select(
+                'COUNT(c.id) AS count',
+                'COALESCE(SUM(c.amount), 0) AS amount',
+                'COALESCE(SUM(c.clientAmount), 0) AS clientAmount',
+                'COALESCE(SUM(c.alphaFordAmount), 0) AS alphaFordAmount',
+            )
             ->getQuery()
-            ->getSingleScalarResult();
+            ->getSingleResult();
+
+        return [
+            'count' => (int) $row['count'],
+            'amount' => (int) $row['amount'],
+            'clientAmount' => (int) $row['clientAmount'],
+            'alphaFordAmount' => (int) $row['alphaFordAmount'],
+        ];
     }
 }

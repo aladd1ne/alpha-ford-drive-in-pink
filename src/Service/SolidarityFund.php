@@ -9,6 +9,9 @@ use App\Repository\FundContributionRepository;
 /**
  * Solidarity fund balance: the configured opening amount (SOLIDARITY_FUND_AMOUNT,
  * e.g. contributions collected outside the site) plus every validated test drive.
+ *
+ * Every public figure (home page counter, cagnotte page, live endpoint, back-office)
+ * comes from snapshot(), so they can never disagree.
  */
 final class SolidarityFund
 {
@@ -18,8 +21,21 @@ final class SolidarityFund
     ) {
     }
 
+    public function snapshot(): FundSnapshot
+    {
+        $totals = $this->contributions->totals();
+
+        return new FundSnapshot(
+            total: $this->solidarityFundAmount + $totals['amount'],
+            testDrives: $totals['count'],
+            clientAmount: $totals['clientAmount'],
+            alphaFordAmount: $totals['alphaFordAmount'],
+            otherAmount: $this->solidarityFundAmount,
+        );
+    }
+
     public function total(): int
     {
-        return $this->solidarityFundAmount + $this->contributions->sumAmounts();
+        return $this->snapshot()->total;
     }
 }

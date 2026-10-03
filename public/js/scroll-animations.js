@@ -72,7 +72,8 @@
         const target = el.firstChild; // the number text node, before the <small> unit
         if (!value || !target || target.nodeType !== Node.TEXT_NODE) return;
         const counter = { n: 0 };
-        gsap.to(counter, {
+        // Kept on the element so js/fund-live.js can take over when the value changes.
+        el.dpCountTween = gsap.to(counter, {
             n: value,
             duration: 2,
             ease: 'power2.out',

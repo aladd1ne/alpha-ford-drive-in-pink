@@ -12,6 +12,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/front.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/toast.css') }}">
     {# Scroll animations: hide the elements to reveal before first paint; never leave them hidden (see js/scroll-animations.js) #}
     <script>
         if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -36,6 +37,7 @@
 
             <div class="dp-nav__links">
                 <a href="{{ path('home') }}#evenements" class="dp-nav__link">Événements</a>
+                <a href="{{ path('fund') }}" class="dp-nav__link">Cagnotte</a>
                 <a href="{{ path('reservation') }}" class="dp-btn dp-btn--main">
                     Réserver <span class="dp-btn__arrow" aria-hidden="true">↗</span>
                 </a>
@@ -76,6 +78,7 @@
                 <div class="dp-footer__links">
                     <a href="{{ path('home') }}">Accueil</a>
                     <a href="{{ path('home') }}#evenements">Événements</a>
+                    <a href="{{ path('fund') }}">Cagnotte</a>
                     <a href="{{ path('reservation') }}">Réserver</a>
                 </div>
             </div>
@@ -86,6 +89,8 @@
     <script src="{{ asset('js/vendor/ScrollTrigger.min.js') }}" defer></script>
     <script src="{{ asset('js/vendor/SplitText.min.js') }}" defer></script>
     <script src="{{ asset('js/scroll-animations.js') }}" defer></script>
+    <script src="{{ asset('js/toast.js') }}" defer></script>
+    <script src="{{ asset('js/wizard-music.js') }}" data-src="{{ asset('assets/mp3/Chopin-Nocturne.mp3') }}" defer></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>
