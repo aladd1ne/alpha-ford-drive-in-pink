@@ -1,11 +1,23 @@
 twig:
     file_name_pattern: '*.twig'
     globals:
-        app_deposit_amount: '%app.deposit_amount%'
         app_contact_phone: '%app.contact_phone%'
-        app_bank_name: '%app.bank_name%'
-        app_bank_rib: '%app.bank_rib%'
-        app_bank_swift: '%app.bank_swift%'
+        # Car photos per experience slug (public/ paths), rendered by templates/_car_visual.html.twig.
+        car_images:
+            everest-ranger:
+                - { src: 'assets/images/cars/evrest.jpg', alt: 'Ford Everest' }
+                - { src: 'assets/images/cars/ranger.jpg', alt: 'Ford Ranger' }
+            territory:
+                - { src: 'assets/images/cars/territory.jpeg', alt: 'Ford Territory' }
+        # One photo per Vehicle enum value, shown on the booking form's vehicle cards and preview.
+        vehicle_images:
+            ranger_raptor: 'assets/images/cars/raptor.jpg'
+            ranger_wildtrak: 'assets/images/cars/wildtrak.jpg'
+            ranger_xlt_bva: 'assets/images/cars/xlt-bva.jpg'
+            everest_limited: 'assets/images/cars/evrest-limited.jpg'
+            everest_xlt: 'assets/images/cars/evrest-xlt.jpg'
+            everest: 'assets/images/cars/evrest.jpg'
+            territory: 'assets/images/cars/territory.jpeg'
 
 when@test:
     twig:

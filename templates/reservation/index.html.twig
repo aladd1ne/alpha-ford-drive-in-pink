@@ -3,17 +3,62 @@
 {% block title %}Réserver mon essai{% endblock %}
 
 {% block body %}
+{% set cards = [
+    {
+        experience: 'everest-ranger',
+        dates: '9 & 10 octobre',
+        title: 'Everest & Ranger Experience',
+        text: 'Ranger Raptor, Ranger Wildtrak, Ranger XLT BVA, Everest Limited ou Everest XLT : choisissez votre modèle et votre créneau.',
+        cta: 'Réserver',
+    },
+    {
+        experience: 'territory',
+        dates: '23 & 24 octobre',
+        title: 'Territory Experience',
+        text: 'Deux journées familiales autour du Ford Territory : choisissez votre date et votre créneau.',
+        cta: 'Réserver',
+    },
+    {
+        experience: 'octobre',
+        dates: 'Tout le mois d’octobre',
+        title: 'Autres jours d’octobre',
+        text: 'Indiquez la date et le modèle souhaités : un conseiller Alpha Ford vous contacte pour confirmer le rendez-vous.',
+        cta: 'Faire une demande',
+    },
+] %}
 <main class="dp-page">
     <div class="dp-container">
         <div class="dp-sec-head">
-            <p class="dp-subhead">Drive in Pink</p>
+            <p class="dp-subhead">Réservation</p>
             <div>
-                <h1 class="dp-sec-head__title">Réservation de test drive</h1>
+                <h1 class="dp-sec-head__title">Choisissez votre test drive</h1>
                 <p class="dp-sec-head__text">
-                    Les réservations ouvrent très bientôt. Revenez dans quelques jours pour choisir votre créneau.
+                    Chaque test drive réalisé et validé ajoute <strong class="dp-accent">30 DT</strong> à la cagnotte
+                    solidaire au profit du <mark class="dp-highlight">service de médecine et de chirurgie de l’Institut Salah Azaïez</mark>.
                 </p>
-                <a href="{{ path('home') }}" class="dp-btn dp-btn--bord dp-btn--lg">← Retour à l’accueil</a>
             </div>
+        </div>
+
+        <div class="dp-res-grid">
+            {% for card in cards %}
+                <article class="dp-res-card">
+                    {% if car_images[card.experience] is defined %}
+                        <div class="dp-visual dp-res-card__visual">
+                            {% include '_car_visual.html.twig' with {experience: card.experience} only %}
+                        </div>
+                    {% endif %}
+                    <p class="dp-event__date">{{ card.dates }}</p>
+                    <h2 class="dp-event__title">{{ card.title }}</h2>
+                    <p class="dp-event__text">{{ card.text }}</p>
+                    {% if full[card.experience] %}
+                        <button type="button" class="dp-btn dp-btn--full dp-btn--lg" disabled>Complet</button>
+                    {% else %}
+                        <a href="{{ path('reservation_form', {experience: card.experience}) }}" class="dp-btn dp-btn--main dp-btn--lg">
+                            {{ card.cta }} <span class="dp-btn__arrow" aria-hidden="true">↗</span>
+                        </a>
+                    {% endif %}
+                </article>
+            {% endfor %}
         </div>
     </div>
 </main>
