@@ -59,7 +59,7 @@ final class TestDriveControllerTest extends WebTestCase
         $this->client->submit($form);
         self::assertResponseRedirects();
         $crawler = $this->client->followRedirect();
-        self::assertSelectorTextContains('.alert-success', '30 DT ajoutés à la cagnotte');
+        self::assertSelectorTextContains('.alert-success', 'Test drive validé — +30 DT ajoutés à la cagnotte.');
         self::assertCount(0, $crawler->filter('form.dp-validate-test-drive'), 'The action disappears once validated.');
         self::assertStringContainsString('Effectué', $crawler->filter('table.datagrid tbody tr')->text());
 

@@ -47,9 +47,17 @@
 
             <div class="dp-hero__intro">
                 {# ── Fund counter ── #}
-                <section class="dp-fund" aria-label="Cagnotte solidaire">
-                    <p class="dp-subhead">Cagnotte solidaire</p>
-                    <p class="dp-fund__value" data-count="{{ fundAmount }}">{{ fundAmount|number_format(0, ',', ' ') }}<small>DT</small></p>
+                {# Live: kept in sync with the backend by js/fund-live.js #}
+                <section class="dp-fund" aria-label="Cagnotte solidaire"
+                         data-fund-live="{{ path('fund_state') }}" data-fund-state="{{ fund.toArray|json_encode }}">
+                    <p class="dp-subhead">Cagnotte solidaire <span class="dp-live" title="Mise à jour en direct">En direct</span></p>
+                    <p class="dp-fund__value" data-count="{{ fund.total }}" data-fund="total">{{ fund.total|number_format(0, ',', ' ') }}<small>DT</small><span class="dp-fund__bump" data-fund-bump aria-hidden="true"></span></p>
+                    <p class="dp-fund__meta">
+                        <strong data-fund="testDrives">{{ fund.testDrives }}</strong>
+                        <span data-fund-label="testDrives" data-one="test drive validé" data-many="test drives validés">{{ fund.testDrives > 1 ? 'test drives validés' : 'test drive validé' }}</span>
+                        · <a href="{{ path('fund') }}" class="dp-link">Voir la cagnotte <span aria-hidden="true">↗</span></a>
+                    </p>
+                    <p class="dp-sr-only" role="status" data-fund-status></p>
                     <ul class="dp-fund__pills">
                         <li class="dp-pill dp-pill--tilt-l">10 DT client</li>
                         <li class="dp-pill dp-pill--dark dp-pill--tilt-r">+ 20 DT Alpha Ford</li>
@@ -157,4 +165,8 @@
     </div>
 
 </main>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ asset('js/fund-live.js') }}" defer></script>
 {% endblock %}

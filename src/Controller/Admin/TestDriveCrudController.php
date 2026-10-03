@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
+use App\Entity\FundContribution;
 use App\Entity\Reservation;
 use App\Enum\Experience;
 use App\Enum\ReservationStatus;
@@ -165,7 +166,7 @@ class TestDriveCrudController extends AbstractCrudController
         }
 
         if (ValidationOutcome::Validated === $outcome) {
-            $this->addFlash('success', 'Test drive validé : 30 DT ajoutés à la cagnotte.');
+            $this->addFlash('success', sprintf('Test drive validé — +%d DT ajoutés à la cagnotte.', FundContribution::TEST_DRIVE_AMOUNT));
         } else {
             $this->addFlash('info', 'Ce test drive était déjà validé : aucun montant ajouté.');
         }

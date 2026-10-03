@@ -19,7 +19,7 @@ class HomeController extends AbstractController
     public function index(SlotAvailability $availability): Response
     {
         return $this->render('home/index.html.twig', [
-            'fundAmount' => $this->fund->total(),
+            'fund' => $this->fund->snapshot(),
             'full' => [
                 Experience::EverestRanger->value => $availability->isFull(Experience::EverestRanger),
                 Experience::Territory->value => $availability->isFull(Experience::Territory),

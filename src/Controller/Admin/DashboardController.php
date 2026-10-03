@@ -6,6 +6,7 @@ use App\Enum\Experience;
 use App\Repository\ReservationRepository;
 use App\Service\Reservation\SlotSchedule;
 use App\Service\SolidarityFund;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Asset;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Assets;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Dashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Config\MenuItem;
@@ -30,7 +31,7 @@ class DashboardController extends AbstractDashboardController
         return $this->render('admin/dashboard.html.twig', [
             'counts' => $this->reservations->countByExperience(),
             'experiences' => Experience::cases(),
-            'fundTotal' => $this->fund->total(),
+            'fund' => $this->fund->snapshot(),
             'toValidateToday' => $this->reservations->countToValidate($this->schedule->dayOf($this->clock->now())),
         ]);
     }
@@ -56,11 +57,14 @@ class DashboardController extends AbstractDashboardController
         yield MenuItem::linkTo(CommercialUserCrudController::class, 'Commerciaux', 'fas fa-user-tie')
             ->setPermission('ROLE_ADMIN');
         yield MenuItem::section('');
+        yield MenuItem::linkToRoute('Cagnotte en direct', 'fas fa-hand-holding-heart', 'fund')->setLinkTarget('_blank');
         yield MenuItem::linkToRoute('Voir le site', 'fas fa-globe', 'home')->setLinkTarget('_blank');
     }
 
     public function configureAssets(): Assets
     {
-        return Assets::new()->addCssFile('css/admin.css');
+        return Assets::new()
+            ->addCssFile('css/admin.css')
+            ->addJsFile(Asset::new('js/fund-live.js')->defer());
     }
 }
