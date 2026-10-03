@@ -54,6 +54,11 @@ img { display: block; max-width: 100%; }
 
 .dp-accent { color: var(--main); }
 
+/* Scroll animations (js/scroll-animations.js): hidden until GSAP reveals them */
+.dp-anim [data-reveal],
+.dp-anim [data-reveal-text],
+.dp-anim [data-reveal-stagger] { visibility: hidden; }
+
 /* Beneficiary of the fund: rose highlighter stroke behind the text */
 .dp-highlight {
     padding: 0 .15em;
@@ -162,6 +167,11 @@ img { display: block; max-width: 100%; }
 .dp-logo--lg { font-size: 34px; }
 .dp-logo--img { flex-shrink: 0; margin-block: -10px; }
 .dp-logo--img img { width: auto; height: 84px; }
+.dp-logo--footer { margin-block: 0; }
+.dp-logo--footer img { height: 150px; }
+
+/* Logo on its own at the top of a card (confirmation, login) */
+.dp-brand-mark { width: auto; height: 110px; margin-bottom: 22px; }
 
 .dp-nav__info {
     display: flex;
@@ -1085,6 +1095,8 @@ img { display: block; max-width: 100%; }
     .dp-nav__link { font-size: 14px; }
     .dp-logo { font-size: 19px; }
     .dp-logo--img img { height: 64px; }
+    .dp-logo--footer img { height: 110px; }
+    .dp-brand-mark { height: 84px; margin-bottom: 16px; }
 
     .dp-hero { padding: 150px 0 36px; }
 

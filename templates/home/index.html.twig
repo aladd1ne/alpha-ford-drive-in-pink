@@ -49,7 +49,7 @@
                 {# ── Fund counter ── #}
                 <section class="dp-fund" aria-label="Cagnotte solidaire">
                     <p class="dp-subhead">Cagnotte solidaire</p>
-                    <p class="dp-fund__value">{{ fundAmount|number_format(0, ',', ' ') }}<small>DT</small></p>
+                    <p class="dp-fund__value" data-count="{{ fundAmount }}">{{ fundAmount|number_format(0, ',', ' ') }}<small>DT</small></p>
                     <ul class="dp-fund__pills">
                         <li class="dp-pill dp-pill--tilt-l">10 DT client</li>
                         <li class="dp-pill dp-pill--dark dp-pill--tilt-r">+ 20 DT Alpha Ford</li>
@@ -91,7 +91,7 @@
     {# ── Cover ── #}
     <section class="dp-cover" aria-label="Test drive solidaire">
         <div class="dp-container">
-            <figure class="dp-cover__img">
+            <figure class="dp-cover__img" data-reveal="cover">
                 <img src="{{ asset('assets/images/cover.jpeg') }}" width="1600" height="620" loading="lazy"
                      alt="Test drive solidaire — Ford Everest, Ford Territory et Ford Ranger XLT sous le ruban rose d’Octobre Rose. Un essai. Un geste. Un impact.">
             </figure>
@@ -102,17 +102,17 @@
     <section class="dp-section dp-events" id="evenements">
         <div class="dp-container">
             <div class="dp-sec-head">
-                <p class="dp-subhead">Octobre Rose</p>
+                <p class="dp-subhead" data-reveal>Octobre Rose</p>
                 <div>
-                    <h2 class="dp-sec-head__title">Les rendez-vous Drive in Pink à ne pas manquer</h2>
-                    <p class="dp-sec-head__text">
+                    <h2 class="dp-sec-head__title" data-reveal-text>Les rendez-vous Drive in Pink à ne pas manquer</h2>
+                    <p class="dp-sec-head__text" data-reveal>
                         Venez découvrir les modèles Ford lors de deux week-ends de test drive et d’animations spéciales
                         organisés dans le cadre d’Octobre Rose.
                     </p>
                 </div>
             </div>
 
-            <div class="dp-events__grid">
+            <div class="dp-events__grid" data-reveal-stagger>
                 {% for event in events %}
                     <article class="dp-event">
                         <div class="dp-event__img dp-visual">
@@ -136,7 +136,7 @@
                 {% endfor %}
             </div>
 
-            <div class="dp-events__note">
+            <div class="dp-events__note" data-reveal>
                 <p>
                     Chaque test drive réalisé et validé durant ces journées, comme pendant tout le mois d’octobre,
                     ajoute <strong class="dp-accent">30 DT</strong> à la cagnotte solidaire destinée à contribuer à
@@ -150,7 +150,7 @@
     </section>
 
     {# ── Big text marquee ── #}
-    <div class="dp-bigmarq" aria-hidden="true">
+    <div class="dp-bigmarq" aria-hidden="true" data-reveal>
         <div class="dp-marq__track">
             {% for i in 1..4 %}<span>Drive in Pink</span><span>Octobre Rose</span>{% endfor %}
         </div>
