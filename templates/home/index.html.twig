@@ -8,7 +8,7 @@
     {
         experience: 'everest-ranger',
         dates: '9 & 10 octobre',
-        day: '09—10',
+        day: '09—10 octobre',
         title: 'Everest & Ranger Experience',
         text: 'Découvrez le Ford Everest et le Ford Ranger lors de deux journées de test drive et d’animations Drive in Pink.',
         tags: ['Ford Everest', 'Ford Ranger', 'Test drive'],
@@ -16,7 +16,7 @@
     {
         experience: 'territory',
         dates: '23 & 24 octobre',
-        day: '23—24',
+        day: '23—24 octobre',
         title: 'Territory Experience',
         text: 'Découvrez le Ford Territory lors de deux journées familiales et conviviales, avec des animations pour enfants, des moments de partage et une belle mobilisation solidaire.',
         tags: ['Ford Territory', 'Famille', 'Animations enfants'],
@@ -47,9 +47,17 @@
 
             <div class="dp-hero__intro">
                 {# ── Fund counter ── #}
-                <section class="dp-fund" aria-label="Cagnotte solidaire">
-                    <p class="dp-subhead">Cagnotte solidaire</p>
-                    <p class="dp-fund__value" data-count="{{ fundAmount }}">{{ fundAmount|number_format(0, ',', ' ') }}<small>DT</small></p>
+                {# Live: kept in sync with the backend by js/fund-live.js #}
+                <section class="dp-fund" aria-label="Cagnotte solidaire"
+                         data-fund-live="{{ path('fund_state') }}" data-fund-state="{{ fund.toArray|json_encode }}">
+                    <p class="dp-subhead">Cagnotte solidaire <span class="dp-live" title="Mise à jour en direct">En direct</span></p>
+                    <p class="dp-fund__value" data-count="{{ fund.total }}" data-fund="total">{{ fund.total|number_format(0, ',', ' ') }}<small>DT</small><span class="dp-fund__bump" data-fund-bump aria-hidden="true"></span></p>
+                    <p class="dp-fund__meta">
+                        <strong data-fund="testDrives">{{ fund.testDrives }}</strong>
+                        <span data-fund-label="testDrives" data-one="test drive validé" data-many="test drives validés">{{ fund.testDrives > 1 ? 'test drives validés' : 'test drive validé' }}</span>
+                        · <a href="{{ path('fund') }}" class="dp-link">Voir la cagnotte <span aria-hidden="true">↗</span></a>
+                    </p>
+                    <p class="dp-sr-only" role="status" data-fund-status></p>
                     <ul class="dp-fund__pills">
                         <li class="dp-pill dp-pill--tilt-l">10 DT client</li>
                         <li class="dp-pill dp-pill--dark dp-pill--tilt-r">+ 20 DT Alpha Ford</li>
@@ -76,7 +84,7 @@
 
     {# ── Marquee bands ── #}
     <div class="dp-marq" aria-hidden="true">
-        <div class="dp-marq__band dp-marq__band--gray">
+        <div class="dp-marq__band dp-marq__band--blue">
             <div class="dp-marq__track">
                 {% for i in 1..2 %}{% for item in models %}<span class="dp-marq__item">{{ item }}</span>{% endfor %}{% endfor %}
             </div>
@@ -128,7 +136,7 @@
                         {% if full[event.experience] %}
                             <button type="button" class="dp-btn dp-btn--full dp-event__cta" disabled>Complet</button>
                         {% else %}
-                            <a href="{{ path('reservation_form', {experience: event.experience}) }}" class="dp-btn dp-btn--bord dp-event__cta">
+                            <a data-music-start href="{{ path('reservation_form', {experience: event.experience}) }}" class="dp-btn dp-btn--bord dp-event__cta">
                                 Réserver <span class="dp-btn__arrow" aria-hidden="true">↗</span>
                             </a>
                         {% endif %}
@@ -157,4 +165,8 @@
     </div>
 
 </main>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ asset('js/fund-live.js') }}" defer></script>
 {% endblock %}

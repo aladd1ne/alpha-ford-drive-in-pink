@@ -22,6 +22,7 @@ class FundContribution
     /** Amounts in DT: the client pays 10, Alpha Ford adds 20. */
     public const CLIENT_SHARE = 10;
     public const ALPHA_FORD_SHARE = 20;
+    public const TEST_DRIVE_AMOUNT = self::CLIENT_SHARE + self::ALPHA_FORD_SHARE;
 
     #[ORM\Id]
     #[ORM\GeneratedValue]

@@ -4,10 +4,15 @@
 
 {% block main %}
     <div class="dp-admin-stats">
-        <div class="dp-admin-stat">
+        {# Live: same figures as the public site (js/fund-live.js) #}
+        <div class="dp-admin-stat" data-fund-live="{{ path('fund_state') }}" data-fund-state="{{ fund.toArray|json_encode }}">
             <div class="dp-admin-stat__label">Cagnotte solidaire</div>
-            <div class="dp-admin-stat__value">{{ fundTotal|number_format(0, ',', ' ') }} DT</div>
-            <div class="dp-admin-stat__note">30 DT par test drive validé</div>
+            <div class="dp-admin-stat__value"><span data-fund="total">{{ fund.total|number_format(0, ',', ' ') }}</span> DT</div>
+            <div class="dp-admin-stat__note">
+                <span data-fund="testDrives">{{ fund.testDrives }}</span>
+                <span data-fund-label="testDrives" data-one="test drive validé" data-many="test drives validés">{{ fund.testDrives > 1 ? 'test drives validés' : 'test drive validé' }}</span>
+                · 30 DT par essai
+            </div>
         </div>
         <div class="dp-admin-stat">
             <div class="dp-admin-stat__label">Aujourd’hui</div>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
+use App\Entity\FundContribution;
 use App\Entity\Reservation;
 use App\Enum\Experience;
 use App\Enum\ReservationStatus;
@@ -11,6 +12,7 @@ use App\Enum\TestDriveStatus;
 use App\Enum\Vehicle;
 use App\Repository\ReservationRepository;
 use App\Service\Reservation\SlotSchedule;
+use App\Service\SolidarityFund;
 use App\Service\TestDrive\ReservationNotFoundException;
 use App\Service\TestDrive\TestDriveNotEligibleException;
 use App\Service\TestDrive\TestDriveValidator;
@@ -60,6 +62,7 @@ class TestDriveCrudController extends AbstractCrudController
         private readonly TestDriveValidator $validator,
         private readonly AdminUrlGenerator $adminUrlGenerator,
         private readonly UrlGeneratorInterface $urlGenerator,
+        private readonly SolidarityFund $fund,
     ) {
     }
 
@@ -165,7 +168,8 @@ class TestDriveCrudController extends AbstractCrudController
         }
 
         if (ValidationOutcome::Validated === $outcome) {
-            $this->addFlash('success', 'Test drive validé : 30 DT ajoutés à la cagnotte.');
+            // Shown as a toast with the new total (templates/admin/flash_messages.html.twig).
+            $this->addFlash('cagnotte', ['amount' => FundContribution::TEST_DRIVE_AMOUNT, 'total' => $this->fund->total()]);
         } else {
             $this->addFlash('info', 'Ce test drive était déjà validé : aucun montant ajouté.');
         }

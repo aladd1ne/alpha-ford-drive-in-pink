@@ -1,0 +1,59 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Cagnotte solidaire{% endblock %}
+
+{% block body %}
+{# Live: kept in sync with the backend by js/fund-live.js, like the home page counter #}
+<main class="dp-page dp-cagnotte" data-fund-live="{{ path('fund_state') }}" data-fund-state="{{ fund.toArray|json_encode }}">
+    <div class="dp-container">
+        <div class="dp-cagnotte__head">
+            <p class="dp-subhead">Cagnotte solidaire <span class="dp-live" title="Mise à jour en direct">En direct</span></p>
+            <h1 class="dp-cagnotte__title">Chaque essai fait grandir la cagnotte Octobre Rose.</h1>
+        </div>
+
+        <section class="dp-cagnotte__total" aria-label="Montant collecté">
+            <p class="dp-cagnotte__label">Montant collecté</p>
+            <p class="dp-fund__value dp-cagnotte__value" data-fund="total">{{ fund.total|number_format(0, ',', ' ') }}<small>DT</small><span class="dp-fund__bump" data-fund-bump aria-hidden="true"></span></p>
+            <p class="dp-cagnotte__for">
+                pour l’acquisition de moniteurs médicaux destinés au
+                <mark class="dp-highlight">service de médecine et de chirurgie de l’Institut Salah Azaïez</mark>.
+            </p>
+            <p class="dp-sr-only" role="status" data-fund-status></p>
+        </section>
+
+        <ul class="dp-cagnotte__stats">
+            <li class="dp-cagnotte__stat dp-cagnotte__stat--main">
+                <span class="dp-cagnotte__stat-value" data-fund="testDrives">{{ fund.testDrives }}</span>
+                <span class="dp-cagnotte__stat-label" data-fund-label="testDrives" data-one="test drive validé" data-many="test drives validés">{{ fund.testDrives > 1 ? 'test drives validés' : 'test drive validé' }}</span>
+                <span class="dp-cagnotte__stat-note">{{ amountPerTestDrive }} DT chacun</span>
+            </li>
+            <li class="dp-cagnotte__stat">
+                <span class="dp-cagnotte__stat-value"><span data-fund="clientAmount">{{ fund.clientAmount|number_format(0, ',', ' ') }}</span> DT</span>
+                <span class="dp-cagnotte__stat-label">versés par les clients</span>
+                <span class="dp-cagnotte__stat-note">{{ clientShare }} DT par essai</span>
+            </li>
+            <li class="dp-cagnotte__stat">
+                <span class="dp-cagnotte__stat-value"><span data-fund="alphaFordAmount">{{ fund.alphaFordAmount|number_format(0, ',', ' ') }}</span> DT</span>
+                <span class="dp-cagnotte__stat-label">versés par Alpha Ford</span>
+                <span class="dp-cagnotte__stat-note">{{ alphaFordShare }} DT par essai</span>
+            </li>
+            <li class="dp-cagnotte__stat" data-fund-show-if="otherAmount" {{ fund.otherAmount ? '' : 'hidden' }}>
+                <span class="dp-cagnotte__stat-value"><span data-fund="otherAmount">{{ fund.otherAmount|number_format(0, ',', ' ') }}</span> DT</span>
+                <span class="dp-cagnotte__stat-label">autres contributions</span>
+                <span class="dp-cagnotte__stat-note">collectées hors du site</span>
+            </li>
+        </ul>
+
+        <div class="dp-cagnotte__foot">
+            <p class="dp-cagnotte__updated">Mise à jour en direct · dernière vérification à <span data-fund-updated>{{ 'now'|date('H:i:s') }}</span></p>
+            <a href="{{ path('reservation') }}" class="dp-btn dp-btn--main dp-btn--lg">
+                Je réserve mon essai <span class="dp-btn__arrow" aria-hidden="true">↗</span>
+            </a>
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ asset('js/fund-live.js') }}" defer></script>
+{% endblock %}
