@@ -1,9 +1,5 @@
 parameters:
-    app.deposit_amount: 50
     app.contact_phone: '+216 71 000 000'
-    app.bank_name: 'Banque de Tunisie'
-    app.bank_rib: '08 006 0123456789 12'
-    app.bank_swift: 'BTUNTNTX'
     app.solidarity_fund_amount: '%env(int:SOLIDARITY_FUND_AMOUNT)%'
 
 services:
@@ -11,7 +7,6 @@ services:
         autowire: true
         autoconfigure: true
         bind:
-            int $depositAmount: '%app.deposit_amount%'
             int $solidarityFundAmount: '%app.solidarity_fund_amount%'
 
     App\:
@@ -20,3 +15,10 @@ services:
             - '../src/DependencyInjection/'
             - '../src/Entity/'
             - '../src/Kernel.php'
+
+when@test:
+    services:
+        # Freeze "now" before the October events so availability rules are deterministic.
+        clock:
+            class: Symfony\Component\Clock\MockClock
+            arguments: ['2026-10-01 08:00:00', 'Africa/Tunis']

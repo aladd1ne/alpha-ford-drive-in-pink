@@ -1,0 +1,16 @@
+{#
+    Car photos of an experience (see "car_images" in config/packages/twig.yaml).
+    One photo fills the frame; two are shown together on a diagonal split.
+    Expects: experience (slug). Render inside an element with the "dp-visual" class.
+#}
+{% set images = car_images[experience] ?? [] %}
+{% if images|length > 1 %}
+    <div class="dp-duo" role="img" aria-label="{{ images|map(image => image.alt)|join(' et ') }}">
+        <span class="dp-duo__split" aria-hidden="true"></span>
+        {% for image in images|slice(0, 2) %}
+            <img class="dp-duo__car dp-duo__car--{{ loop.index }}" src="{{ asset(image.src) }}" alt="" loading="lazy">
+        {% endfor %}
+    </div>
+{% elseif images|length == 1 %}
+    <img class="dp-car" src="{{ asset(images[0].src) }}" alt="{{ images[0].alt }}" loading="lazy">
+{% endif %}

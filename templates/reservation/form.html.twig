@@ -1,0 +1,143 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ experience.label }} — Réservation{% endblock %}
+
+{% macro field(field) %}
+    <div class="dp-field">
+        {{ form_label(field, null, {label_attr: {class: 'dp-label'}}) }}
+        {{ form_widget(field, {attr: field.vars.attr|merge({class: 'dp-input'})}) }}
+        {{ form_errors(field) }}
+    </div>
+{% endmacro %}
+
+{% macro choices(field, modifier) %}
+    <fieldset class="dp-fieldset" data-step="{{ field.vars.name }}">
+        <legend class="dp-label">{{ field.vars.label }}</legend>
+        <p class="dp-step-hint" data-step-hint hidden></p>
+        <div class="dp-choices{{ modifier == 'dp-choice--vehicle' ? ' dp-choices--vehicles' }}">
+            {% for child in field %}
+                {% if modifier == 'dp-choice--vehicle' %}
+                    {% set image = vehicle_images[child.vars.value] ?? null %}
+                    <label class="dp-choice dp-choice--vehicle" data-vehicle="{{ child.vars.value }}"{% if image %} data-image="{{ asset(image) }}"{% endif %}>
+                        {{ form_widget(child) }}
+                        <span class="dp-vehicle__img">
+                            {% if image %}
+                                <img src="{{ asset(image) }}" alt="" loading="lazy">
+                            {% else %}
+                                <span class="dp-vehicle__advice" aria-hidden="true">?</span>
+                            {% endif %}
+                        </span>
+                        <span class="dp-vehicle__name">{{ child.vars.label }}</span>
+                        <small class="dp-choice__status">Complet ce jour-là</small>
+                    </label>
+                {% else %}
+                    <label class="dp-choice {{ modifier }}"{% if modifier == 'dp-choice--slot' %} data-slot="{{ child.vars.value }}"{% endif %}>
+                        {{ form_widget(child) }}
+                        <span>{{ child.vars.label }}</span>
+                        {% if modifier == 'dp-choice--slot' %}<small class="dp-choice__status">Complet</small>{% endif %}
+                    </label>
+                {% endif %}
+            {% endfor %}
+        </div>
+        {{ form_errors(field) }}
+    </fieldset>
+{% endmacro %}
+
+{% block body %}
+{% set intro = {
+    'everest-ranger': {subhead: '9 & 10 octobre', text: 'Réservez votre essai du Ford Ranger ou du Ford Everest. Les créneaux sont gérés par date, par véhicule et par horaire.'},
+    'territory': {subhead: '23 & 24 octobre', text: 'Réservez votre essai du Ford Territory lors de nos deux journées familiales.'},
+    'octobre': {subhead: 'Tout le mois d’octobre', text: 'Indiquez la date et le véhicule souhaités. Il ne s’agit pas d’une réservation immédiate : un conseiller Alpha Ford vous contactera pour confirmer le rendez-vous.'},
+}[experience.value] %}
+<main class="dp-page">
+    <div class="dp-container">
+        <div class="dp-sec-head">
+            <div>
+                <p class="dp-subhead">{{ intro.subhead }}</p>
+                {# Experience photo(s); replaced by the chosen vehicle's photo (public/js/reservation.js) #}
+                {% set has_visual = car_images[experience.value] is defined %}
+                {% if has_visual or experience.hasVehicleChoice %}
+                    <div class="dp-visual dp-sec-head__visual" data-vehicle-preview{% if not has_visual %} hidden{% endif %}>
+                        {% include '_car_visual.html.twig' with {experience: experience.value} only %}
+                    </div>
+                {% endif %}
+            </div>
+            <div>
+                <h1 class="dp-sec-head__title">{{ experience.label }}</h1>
+                <p class="dp-sec-head__text">{{ intro.text }}</p>
+            </div>
+        </div>
+
+        {% if full %}
+            <div class="dp-res-full">
+                <p>Tous les créneaux de cette expérience sont complets.</p>
+                <button type="button" class="dp-btn dp-btn--full dp-btn--lg" disabled>Complet</button>
+                <a href="{{ path('reservation_form', {experience: 'octobre'}) }}" class="dp-btn dp-btn--bord dp-btn--lg">Demander un autre jour</a>
+            </div>
+        {% else %}
+            {#
+                Wizard (public/js/reservation.js): one [data-wizard-step] at a time — contact details,
+                then date, vehicle and slot, with a recap on the last step.
+                Without JavaScript every step is shown as one plain form.
+            #}
+            {{ form_start(form, {attr: {
+                class: 'dp-form',
+                'data-wizard': '',
+                'data-availability': availability|json_encode,
+                'data-vehicle': experience.hasVehicleChoice ? '' : experience.vehicles|first.value,
+                'data-vehicle-label': experience.hasVehicleChoice ? '' : experience.vehicles|first.label,
+            }}) }}
+                {{ form_errors(form) }}
+
+                <ol class="dp-wizard__progress" data-wizard-progress hidden></ol>
+
+                <div class="dp-wizard__step" data-wizard-step data-title="Coordonnées">
+                    <div class="dp-form__row">
+                        {{ _self.field(form.fullName) }}
+                        {{ _self.field(form.phone) }}
+                        {{ _self.field(form.email) }}
+                    </div>
+                </div>
+
+                <div class="dp-wizard__step" data-wizard-step data-title="Date">
+                    {% if experience.hasSlots %}
+                        {{ _self.choices(form.date, 'dp-choice--date') }}
+                    {% else %}
+                        <div class="dp-form__row dp-form__row--single">{{ _self.field(form.date) }}</div>
+                    {% endif %}
+                </div>
+
+                {% if form.vehicle is defined %}
+                    <div class="dp-wizard__step" data-wizard-step data-title="Véhicule">
+                        {{ _self.choices(form.vehicle, 'dp-choice--vehicle') }}
+                    </div>
+                {% endif %}
+
+                {% if form.slot is defined %}
+                    <div class="dp-wizard__step" data-wizard-step data-title="Créneau">
+                        {{ _self.choices(form.slot, 'dp-choice--slot') }}
+                    </div>
+                {% endif %}
+
+                <dl class="dp-wizard__recap" data-wizard-recap hidden></dl>
+
+                <div class="dp-form__actions">
+                    <button type="button" class="dp-btn dp-btn--bord dp-btn--lg" data-wizard-prev hidden>← Retour</button>
+                    <button type="button" class="dp-btn dp-btn--main dp-btn--lg" data-wizard-next hidden>
+                        Continuer <span class="dp-btn__arrow" aria-hidden="true">→</span>
+                    </button>
+                    <button type="submit" class="dp-btn dp-btn--main dp-btn--lg">
+                        {{ experience.hasSlots ? 'Réserver mon créneau' : 'Envoyer ma demande' }}
+                        <span class="dp-btn__arrow" aria-hidden="true">↗</span>
+                    </button>
+                    <a href="{{ path('reservation') }}" class="dp-form__back">← Autres formules</a>
+                </div>
+            {{ form_end(form) }}
+        {% endif %}
+    </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{{ asset('js/reservation.js') }}" defer></script>
+{% endblock %}

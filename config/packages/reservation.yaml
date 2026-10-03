@@ -1,0 +1,35 @@
+# Drive in Pink — test drive reservations.
+#
+# - slots: shared time slots ("start-end").
+# - experiences.<slug>.dates: event day => end of the last bookable slot that day
+#   (Friday runs until 16:15, Saturday stops at 14:00).
+# - experiences.<slug>.capacity: bookings accepted per date + vehicle + slot.
+# - request_month: month accepted by the "autres jours d'octobre" request form.
+parameters:
+    app.reservation.timezone: 'Africa/Tunis'
+
+    app.reservation.slots:
+        - '09:00-09:30'
+        - '09:45-10:15'
+        - '10:30-11:00'
+        - '11:15-11:45'
+        - '12:00-12:30'
+        - '12:45-13:15'
+        - '13:30-14:00'
+        - '14:15-14:45'
+        - '15:00-15:30'
+        - '15:45-16:15'
+
+    app.reservation.experiences:
+        everest-ranger:
+            capacity: 1
+            dates:
+                '2026-10-09': '16:15'
+                '2026-10-10': '14:00'
+        territory:
+            capacity: 1
+            dates:
+                '2026-10-23': '16:15'
+                '2026-10-24': '14:00'
+
+    app.reservation.request_month: '2026-10'

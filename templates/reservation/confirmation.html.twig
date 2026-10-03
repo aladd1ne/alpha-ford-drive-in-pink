@@ -1,0 +1,30 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Demande enregistrée{% endblock %}
+
+{% block body %}
+{% set message = {
+    'everest-ranger': {
+        title: 'Votre demande de participation à l’Everest & Ranger Experience a bien été enregistrée.',
+        text: 'Un conseiller Alpha Ford vous contactera pour confirmer votre créneau du 9 ou 10 octobre.',
+    },
+    'territory': {
+        title: 'Votre demande de participation à la Territory Experience a bien été enregistrée.',
+        text: 'Un conseiller Alpha Ford vous contactera pour confirmer votre créneau du 23 ou 24 octobre.',
+    },
+    'octobre': {
+        title: 'Merci, votre demande a bien été enregistrée.',
+        text: 'Un conseiller Alpha Ford vous contactera afin de confirmer votre rendez-vous.',
+    },
+}[experience.value] %}
+<main class="dp-page">
+    <div class="dp-container">
+        <div class="dp-confirm">
+            <p class="dp-subhead">Drive in Pink</p>
+            <h1 class="dp-confirm__title">{{ message.title }}</h1>
+            <p class="dp-confirm__text">{{ message.text }}</p>
+            <a href="{{ path('home') }}" class="dp-btn dp-btn--main dp-btn--lg">Retour à l’accueil</a>
+        </div>
+    </div>
+</main>
+{% endblock %}

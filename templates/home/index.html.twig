@@ -6,6 +6,7 @@
 {% set models = ['Ford Everest', 'Ford Ranger', 'Ford Territory', 'Octobre Rose', 'Test drive solidaire', '30 DT par essai'] %}
 {% set events = [
     {
+        experience: 'everest-ranger',
         dates: '9 & 10 octobre',
         day: '09—10',
         title: 'Everest & Ranger Experience',
@@ -13,6 +14,7 @@
         tags: ['Ford Everest', 'Ford Ranger', 'Test drive'],
     },
     {
+        experience: 'territory',
         dates: '23 & 24 octobre',
         day: '23—24',
         title: 'Territory Experience',
@@ -26,7 +28,12 @@
     <header class="dp-hero">
         <div class="dp-container">
             <div class="dp-hero__caption">
-                <h1 class="dp-hero__title">Drive in Pink</h1>
+                {# Each word slides up from a mask (see .dp-hero__word in front.css) #}
+                <h1 class="dp-hero__title" aria-label="Drive in Pink">
+                    {%- for word in ['Drive', 'in', 'Pink'] -%}
+                        <span class="dp-hero__word" aria-hidden="true"><span style="--i: {{ loop.index0 }}">{{ word }}</span></span>{{ not loop.last ? ' ' }}
+                    {%- endfor -%}
+                </h1>
                 <ul class="dp-hero__pills" aria-label="Campagne">
                     <li class="dp-pill dp-pill--p1">Test drive solidaire</li>
                     <li class="dp-pill dp-pill--dark dp-pill--p2">Octobre Rose</li>
@@ -53,8 +60,8 @@
                     <p class="dp-hero__formula">10 DT versés par le client + 20 DT versés par Alpha Ford</p>
                     <p class="dp-hero__text">
                         Soit <strong class="dp-accent">30 DT</strong> ajoutés à la cagnotte solidaire destinée à contribuer
-                        à l’acquisition de moniteurs médicaux pour le service de médecine et de chirurgie de
-                        l’Institut Salah Azaïez.
+                        à l’acquisition de moniteurs médicaux pour
+                        <mark class="dp-highlight">le service de médecine et de chirurgie de l’Institut Salah Azaïez</mark>.
                     </p>
                     <a href="{{ path('reservation') }}" class="dp-btn dp-btn--main dp-btn--lg">
                         Je réserve mon essai <span class="dp-btn__arrow" aria-hidden="true">↗</span>
@@ -95,9 +102,9 @@
             <div class="dp-events__grid">
                 {% for event in events %}
                     <article class="dp-event">
-                        {# Visual placeholder — swap for <img src="{{ asset('images/events/…') }}"> once photos are ready #}
-                        <div class="dp-event__img dp-event__img--{{ loop.index }}">
-                            <span class="dp-event__day" aria-hidden="true">{{ event.day }}</span>
+                        <div class="dp-event__img dp-visual">
+                            {% include '_car_visual.html.twig' with {experience: event.experience} only %}
+                            <span class="dp-event__badge">{{ event.day }}</span>
                             <ul class="dp-event__tags">
                                 {% for tag in event.tags %}<li>{{ tag }}</li>{% endfor %}
                             </ul>
@@ -105,6 +112,13 @@
                         <p class="dp-event__date">{{ event.dates }}</p>
                         <h3 class="dp-event__title">{{ event.title }}</h3>
                         <p class="dp-event__text">{{ event.text }}</p>
+                        {% if full[event.experience] %}
+                            <button type="button" class="dp-btn dp-btn--full dp-event__cta" disabled>Complet</button>
+                        {% else %}
+                            <a href="{{ path('reservation_form', {experience: event.experience}) }}" class="dp-btn dp-btn--bord dp-event__cta">
+                                Réserver <span class="dp-btn__arrow" aria-hidden="true">↗</span>
+                            </a>
+                        {% endif %}
                     </article>
                 {% endfor %}
             </div>
@@ -113,7 +127,7 @@
                 <p>
                     Chaque test drive réalisé et validé durant ces journées, comme pendant tout le mois d’octobre,
                     ajoute <strong class="dp-accent">30 DT</strong> à la cagnotte solidaire destinée à contribuer à
-                    l’acquisition de moniteurs médicaux pour le service de médecine et de chirurgie de l’Institut Salah Azaïez.
+                    l’acquisition de moniteurs médicaux pour <mark class="dp-highlight">le service de médecine et de chirurgie de l’Institut Salah Azaïez</mark>.
                 </p>
                 <a href="{{ path('reservation') }}" class="dp-btn dp-btn--main dp-btn--lg">
                     Je réserve mon essai <span class="dp-btn__arrow" aria-hidden="true">↗</span>

@@ -1,163 +1,19 @@
-{% extends '@EasyAdmin/layout.html.twig' %}
+{% extends '@EasyAdmin/page/content.html.twig' %}
 
-{% block content_title %}Tableau de bord{% endblock %}
+{% block page_title %}Tableau de bord{% endblock %}
 
 {% block main %}
-<div class="ea-main-content">
-    <div class="dash-wrap">
-
-        {# ── Stat cards ── #}
-        <div class="stat-grid">
-            <div class="stat-card">
-                <span class="stat-label">Réservations total</span>
-                <span class="stat-value">{{ overview.totalBookings }}</span>
+    <div class="dp-admin-stats">
+        {% for experience in experiences %}
+            <div class="dp-admin-stat">
+                <div class="dp-admin-stat__label">{{ experience.label }}</div>
+                <div class="dp-admin-stat__value">{{ counts[experience.value]|default(0) }}</div>
+                <div class="dp-admin-stat__note">{{ experience.hasSlots ? 'créneaux réservés' : 'demandes de rappel' }}</div>
             </div>
-            <div class="stat-card">
-                <span class="stat-label">Ce mois-ci</span>
-                <span class="stat-value accent">{{ overview.thisMonthBookings }}</span>
-            </div>
-            <div class="stat-card">
-                <span class="stat-label">Chiffre d'affaires</span>
-                <span class="stat-value">{{ overview.totalRevenue|number_format(0) }}<small>TND</small></span>
-            </div>
-            <div class="stat-card">
-                <span class="stat-label">Acomptes perçus</span>
-                <span class="stat-value accent">{{ overview.depositsCollected }}<small>TND</small></span>
-            </div>
-        </div>
+        {% endfor %}
+    </div>
 
-        {# ── Status + Category breakdown ── #}
-        <div class="dash-row">
-            <div class="dash-card">
-                <h3 class="dash-card-title">Réservations par statut</h3>
-                <ul class="status-list">
-                    {% for status, label in {'pending': 'En attente', 'confirmed': 'Confirmées', 'completed': 'Terminées', 'cancelled': 'Annulées'} %}
-                    <li class="status-item status-item--{{ status }}">
-                        <span class="status-dot"></span>
-                        <span class="status-name">{{ label }}</span>
-                        <span class="status-count">{{ overview.byStatus[status] ?? 0 }}</span>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-            <div class="dash-card">
-                <h3 class="dash-card-title">Expériences les plus réservées</h3>
-                <ul class="category-list">
-                    {% for row in overview.byCategory %}
-                    <li class="category-item">
-                        <span class="category-name">{{ row.name }}</span>
-                        <span class="category-bar-wrap">
-                            <span class="category-bar"
-                                  style="width: {{ overview.totalBookings > 0 ? ((row.cnt / overview.totalBookings) * 100)|round ~ '%' : '0%' }}"></span>
-                        </span>
-                        <span class="category-count">{{ row.cnt }}</span>
-                    </li>
-                    {% endfor %}
-                    {% if overview.byCategory is empty %}
-                    <li style="color:var(--text-3);font-size:.85rem">Aucune donnée.</li>
-                    {% endif %}
-                </ul>
-            </div>
-        </div>
-
-        {# ── Charts ── #}
-        <div class="dash-row">
-            <div class="dash-card dash-card--chart">
-                <h3 class="dash-card-title">Réservations / mois</h3>
-                <canvas id="chartBookings" height="80"></canvas>
-            </div>
-            <div class="dash-card dash-card--chart">
-                <h3 class="dash-card-title">Chiffre d'affaires / mois (TND)</h3>
-                <canvas id="chartRevenue" height="80"></canvas>
-            </div>
-        </div>
-
-        {# ── Popular extras ── #}
-        {% if extraStats is not empty %}
-        <div class="dash-card dash-card--full">
-            <h3 class="dash-card-title">Options les plus demandées</h3>
-            <ul class="extras-stats-list">
-                {% set maxCount = extraStats|first %}
-                {% for name, count in extraStats %}
-                <li class="extras-stats-item">
-                    <span class="extras-stats-name">{{ name }}</span>
-                    <span class="extras-stats-bar-wrap">
-                        <span class="extras-stats-bar" style="width: {{ maxCount > 0 ? ((count / maxCount) * 100)|round ~ '%' : '0%' }}"></span>
-                    </span>
-                    <span class="extras-stats-count">{{ count }}×</span>
-                </li>
-                {% endfor %}
-            </ul>
-        </div>
-        {% endif %}
-
-    </div>{# /dash-wrap #}
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
-<script>
-(function () {
-    'use strict';
-    const accent  = '#E8701A';
-    const accent2 = '#71d0ff';
-    const gridCol = 'rgba(255,255,255,0.06)';
-    const textCol = '#6B6560';
-
-    Chart.defaults.color = textCol;
-    Chart.defaults.borderColor = gridCol;
-    Chart.defaults.font.family = "'Inter', sans-serif";
-    Chart.defaults.font.size   = 12;
-
-    const labels = {{ chartData.labels|json_encode|raw }};
-
-    new Chart(document.getElementById('chartBookings'), {
-        type: 'bar',
-        data: {
-            labels,
-            datasets: [{
-                label: 'Réservations',
-                data: {{ chartData.bookings|json_encode|raw }},
-                backgroundColor: accent + 'CC',
-                borderColor: accent,
-                borderWidth: 1,
-                borderRadius: 4,
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { grid: { color: gridCol } },
-                y: { grid: { color: gridCol }, beginAtZero: true, ticks: { stepSize: 1 } }
-            }
-        }
-    });
-
-    new Chart(document.getElementById('chartRevenue'), {
-        type: 'line',
-        data: {
-            labels,
-            datasets: [{
-                label: 'Chiffre d\'affaires (TND)',
-                data: {{ chartData.revenue|json_encode|raw }},
-                borderColor: accent2,
-                backgroundColor: accent2 + '22',
-                borderWidth: 2,
-                pointBackgroundColor: accent2,
-                pointRadius: 4,
-                fill: true,
-                tension: 0.3,
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { grid: { color: gridCol } },
-                y: { grid: { color: gridCol }, beginAtZero: true }
-            }
-        }
-    });
-}());
-</script>
+    <a href="{{ ea_url().setController('App\\Controller\\Admin\\ReservationCrudController').setAction('index') }}" class="btn btn-primary">
+        Voir toutes les réservations
+    </a>
 {% endblock %}
