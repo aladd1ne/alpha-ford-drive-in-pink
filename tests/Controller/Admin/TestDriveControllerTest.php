@@ -59,14 +59,15 @@ final class TestDriveControllerTest extends WebTestCase
         $this->client->submit($form);
         self::assertResponseRedirects();
         $crawler = $this->client->followRedirect();
-        self::assertSelectorTextContains('.alert-success', 'Test drive validé — +30 DT ajoutés à la cagnotte.');
+        $this->assertCagnotteToast($crawler, $this->openingAmount() + 30);
         self::assertCount(0, $crawler->filter('form.dp-validate-test-drive'), 'The action disappears once validated.');
         self::assertStringContainsString('Effectué', $crawler->filter('table.datagrid tbody tr')->text());
 
         // Same POST again (double click / resubmission).
         $this->client->submit($form);
-        $this->client->followRedirect();
+        $crawler = $this->client->followRedirect();
         self::assertSelectorTextContains('.alert-info', 'déjà validé');
+        self::assertCount(0, $crawler->filter('template[data-toast]'), 'No toast when nothing was added.');
 
         self::assertCount(1, $this->contributions());
         self::assertSame(30, $this->contributions()[0]->getAmount());
@@ -98,8 +99,7 @@ final class TestDriveControllerTest extends WebTestCase
         $this->client->submit($form->form());
 
         self::assertResponseRedirects('/admin/reservation');
-        $this->client->followRedirect();
-        self::assertSelectorTextContains('.alert-success', '30 DT ajoutés à la cagnotte');
+        $this->assertCagnotteToast($this->client->followRedirect(), $this->openingAmount() + 30);
         self::assertCount(1, $this->contributions());
         $future = $this->reload($future);
         self::assertSame(TestDriveStatus::Completed, $future->getTestDriveStatus());
@@ -264,5 +264,26 @@ final class TestDriveControllerTest extends WebTestCase
         $em->clear();
 
         return $em->getRepository(FundContribution::class)->findAll();
+    }
+
+    /**
+     * Toast rendered for js/toast.js after a credit: +30 DT and the new fund total.
+     */
+    private function assertCagnotteToast(Crawler $crawler, int $expectedTotal): void
+    {
+        $toast = $crawler->filter('template[data-toast]');
+        self::assertCount(1, $toast);
+        self::assertSame('+30 DT', $toast->attr('data-badge'));
+        self::assertStringContainsString('Test drive validé', (string) $toast->attr('data-title'));
+        self::assertStringContainsString(
+            sprintf('Nouveau total de la cagnotte : %s DT', number_format($expectedTotal, 0, ',', ' ')),
+            $toast->html(),
+        );
+        self::assertCount(0, $crawler->filter('.alert-success'));
+    }
+
+    private function openingAmount(): int
+    {
+        return (int) static::getContainer()->getParameter('app.solidarity_fund_amount');
     }
 }

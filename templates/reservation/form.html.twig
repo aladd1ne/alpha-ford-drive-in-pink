@@ -72,7 +72,7 @@
             <div class="dp-res-full">
                 <p>Tous les créneaux de cette expérience sont complets.</p>
                 <button type="button" class="dp-btn dp-btn--full dp-btn--lg" disabled>Complet</button>
-                <a href="{{ path('reservation_form', {experience: 'octobre'}) }}" class="dp-btn dp-btn--bord dp-btn--lg">Demander un autre jour</a>
+                <a data-music-start href="{{ path('reservation_form', {experience: 'octobre'}) }}" class="dp-btn dp-btn--bord dp-btn--lg">Demander un autre jour</a>
             </div>
         {% else %}
             {#
@@ -88,6 +88,15 @@
                 'data-vehicle-label': experience.hasVehicleChoice ? '' : experience.vehicles|first.label,
             }}) }}
                 {{ form_errors(form) }}
+
+                {# Background music, started by a "Réserver" click or the first interaction with the form (public/js/wizard-music.js) #}
+                <div class="dp-player" data-music data-music-title="Chopin - Nocturne op.9 No.2" hidden>
+                    <p class="dp-player__now" data-music-now aria-live="polite"></p>
+                    <button type="button" class="dp-music" data-music-toggle aria-pressed="false">
+                        <span class="dp-music__bars" aria-hidden="true"><i></i><i></i><i></i></span>
+                        <span class="dp-music__label">Musique</span>
+                    </button>
+                </div>
 
                 <ol class="dp-wizard__progress" data-wizard-progress hidden></ol>
 

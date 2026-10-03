@@ -8,7 +8,7 @@
     {
         experience: 'everest-ranger',
         dates: '9 & 10 octobre',
-        day: '09—10',
+        day: '09—10 octobre',
         title: 'Everest & Ranger Experience',
         text: 'Découvrez le Ford Everest et le Ford Ranger lors de deux journées de test drive et d’animations Drive in Pink.',
         tags: ['Ford Everest', 'Ford Ranger', 'Test drive'],
@@ -16,7 +16,7 @@
     {
         experience: 'territory',
         dates: '23 & 24 octobre',
-        day: '23—24',
+        day: '23—24 octobre',
         title: 'Territory Experience',
         text: 'Découvrez le Ford Territory lors de deux journées familiales et conviviales, avec des animations pour enfants, des moments de partage et une belle mobilisation solidaire.',
         tags: ['Ford Territory', 'Famille', 'Animations enfants'],
@@ -84,7 +84,7 @@
 
     {# ── Marquee bands ── #}
     <div class="dp-marq" aria-hidden="true">
-        <div class="dp-marq__band dp-marq__band--gray">
+        <div class="dp-marq__band dp-marq__band--blue">
             <div class="dp-marq__track">
                 {% for i in 1..2 %}{% for item in models %}<span class="dp-marq__item">{{ item }}</span>{% endfor %}{% endfor %}
             </div>
@@ -136,7 +136,7 @@
                         {% if full[event.experience] %}
                             <button type="button" class="dp-btn dp-btn--full dp-event__cta" disabled>Complet</button>
                         {% else %}
-                            <a href="{{ path('reservation_form', {experience: event.experience}) }}" class="dp-btn dp-btn--bord dp-event__cta">
+                            <a data-music-start href="{{ path('reservation_form', {experience: event.experience}) }}" class="dp-btn dp-btn--bord dp-event__cta">
                                 Réserver <span class="dp-btn__arrow" aria-hidden="true">↗</span>
                             </a>
                         {% endif %}

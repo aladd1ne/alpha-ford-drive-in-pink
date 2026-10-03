@@ -8,6 +8,7 @@ use App\Service\Reservation\SlotSchedule;
 use App\Service\SolidarityFund;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Asset;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Assets;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Dashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Config\MenuItem;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Option\ColorScheme;
@@ -45,6 +46,13 @@ class DashboardController extends AbstractDashboardController
             ->disableDarkMode();
     }
 
+    public function configureCrud(): Crud
+    {
+        // Cagnotte credits are shown as toasts (js/toast.js), other messages as alerts.
+        return Crud::new()
+            ->overrideTemplate('flash_messages', 'admin/flash_messages.html.twig');
+    }
+
     public function configureMenuItems(): iterable
     {
         yield MenuItem::linkToDashboard('Tableau de bord', 'fas fa-chart-bar');
@@ -65,6 +73,8 @@ class DashboardController extends AbstractDashboardController
     {
         return Assets::new()
             ->addCssFile('css/admin.css')
+            ->addCssFile('css/toast.css')
+            ->addJsFile(Asset::new('js/toast.js')->defer())
             ->addJsFile(Asset::new('js/fund-live.js')->defer());
     }
 }

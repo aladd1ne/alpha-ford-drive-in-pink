@@ -12,6 +12,8 @@
  *   data-fund-updated                 time of the last successful check
  *   data-fund-status                  visually hidden live region for screen readers
  *
+ * When the total grows, a toast with the new amount slides in from the top right (js/toast.js).
+ *
  * The state endpoint is polled every few seconds while the tab is visible, and right away
  * when it becomes visible again. Unchanged figures answer 304 (ETag), so polling is cheap.
  */
@@ -78,10 +80,20 @@
         });
 
         if (previous && next.total > previous.total) {
+            const testDrives = `${next.testDrives} test drive${next.testDrives > 1 ? 's' : ''} validé${next.testDrives > 1 ? 's' : ''}`;
             bump(next.total - previous.total);
-            all('[data-fund-status]').forEach((el) => {
-                el.textContent = `Cagnotte mise à jour : ${display(next.total)} DT, ${next.testDrives} test drive${next.testDrives > 1 ? 's' : ''} validé${next.testDrives > 1 ? 's' : ''}.`;
-            });
+            if (window.dpToast) {
+                // The toast region announces it; avoid a second announcement.
+                window.dpToast({
+                    badge: `+${display(next.total - previous.total)} DT`,
+                    title: 'Nouvelle contribution à la cagnotte',
+                    message: `Total : ${display(next.total)} DT · ${testDrives}`,
+                });
+            } else {
+                all('[data-fund-status]').forEach((el) => {
+                    el.textContent = `Cagnotte mise à jour : ${display(next.total)} DT, ${testDrives}.`;
+                });
+            }
         }
     };
 

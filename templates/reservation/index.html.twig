@@ -32,10 +32,6 @@
             <p class="dp-subhead">Réservation</p>
             <div>
                 <h1 class="dp-sec-head__title" data-reveal-text>Choisissez votre test drive</h1>
-                <p class="dp-sec-head__text" data-reveal>
-                    Chaque test drive réalisé et validé ajoute <strong class="dp-accent">30 DT</strong> à la cagnotte
-                    solidaire au profit du <mark class="dp-highlight">service de médecine et de chirurgie de l’Institut Salah Azaïez</mark>.
-                </p>
             </div>
         </div>
 
@@ -53,7 +49,7 @@
                     {% if full[card.experience] %}
                         <button type="button" class="dp-btn dp-btn--full dp-btn--lg" disabled>Complet</button>
                     {% else %}
-                        <a href="{{ path('reservation_form', {experience: card.experience}) }}" class="dp-btn dp-btn--main dp-btn--lg">
+                        <a data-music-start href="{{ path('reservation_form', {experience: card.experience}) }}" class="dp-btn dp-btn--main dp-btn--lg">
                             {{ card.cta }} <span class="dp-btn__arrow" aria-hidden="true">↗</span>
                         </a>
                     {% endif %}
