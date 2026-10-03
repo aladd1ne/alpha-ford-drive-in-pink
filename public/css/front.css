@@ -943,6 +943,8 @@ img { display: block; max-width: 100%; }
     border-top: 1px solid var(--line);
 }
 .dp-footer__bottom p { font-size: 14px; }
+.dp-footer__credit { display: block; margin-top: 4px; color: var(--sub); }
+.dp-footer__credit strong { color: var(--main); font-weight: 600; }
 
 .dp-footer__links { display: flex; gap: 30px; font-size: 14px; color: var(--sub); }
 .dp-footer__links a:hover { color: var(--main); }
