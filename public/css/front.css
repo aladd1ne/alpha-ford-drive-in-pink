@@ -160,6 +160,8 @@ img { display: block; max-width: 100%; }
     background: var(--main);
 }
 .dp-logo--lg { font-size: 34px; }
+.dp-logo--img { flex-shrink: 0; margin-block: -10px; }
+.dp-logo--img img { width: auto; height: 84px; }
 
 .dp-nav__info {
     display: flex;
@@ -432,6 +434,23 @@ img { display: block; max-width: 100%; }
 @keyframes dp-marquee {
     from { transform: translateX(0); }
     to   { transform: translateX(-50%); }
+}
+
+/* ─────────────────────────────────────────────────────────
+   COVER
+   ───────────────────────────────────────────────────────── */
+.dp-cover { padding-top: 80px; }
+
+.dp-cover__img {
+    overflow: hidden;
+    border-radius: var(--radius);
+    background: var(--gray);
+}
+.dp-cover__img img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1600 / 620;
+    object-fit: cover;
 }
 
 /* ─────────────────────────────────────────────────────────
@@ -1065,6 +1084,7 @@ img { display: block; max-width: 100%; }
     .dp-nav__inner { padding: 12px 14px; gap: 12px; }
     .dp-nav__link { font-size: 14px; }
     .dp-logo { font-size: 19px; }
+    .dp-logo--img img { height: 64px; }
 
     .dp-hero { padding: 150px 0 36px; }
 
@@ -1079,6 +1099,9 @@ img { display: block; max-width: 100%; }
 
     .dp-marq__item { font-size: 20px; padding: 0 34px; }
     .dp-marq { padding: 30px 0 10px; }
+
+    .dp-cover { padding-top: 50px; }
+    .dp-cover__img { border-radius: 10px; }
 
     .dp-section { padding: 70px 0; }
     .dp-sec-head { margin-bottom: 36px; }
