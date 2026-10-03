@@ -36,6 +36,19 @@ final class CreateAdminCommandTest extends KernelTestCase
         self::assertNotSame('secret-pass', $admin->getPassword());
     }
 
+    public function testCreatesACommercialWithTheOption(): void
+    {
+        $this->tester->setInputs(['vente@alphaford.tn', 'secret-pass', 'secret-pass']);
+
+        self::assertSame(Command::SUCCESS, $this->tester->execute(['--commercial' => true]));
+        self::assertStringContainsString('Commercial user "vente@alphaford.tn" created', $this->tester->getDisplay());
+
+        $user = $this->entityManager()->getRepository(AdminUser::class)->findOneBy(['email' => 'vente@alphaford.tn']);
+        self::assertNotNull($user);
+        self::assertContains('ROLE_COMMERCIAL', $user->getRoles());
+        self::assertNotContains('ROLE_ADMIN', $user->getRoles());
+    }
+
     public function testRepromptsOnInvalidAnswers(): void
     {
         // invalid e-mail, then valid; short password, then valid; wrong confirmation, then right.

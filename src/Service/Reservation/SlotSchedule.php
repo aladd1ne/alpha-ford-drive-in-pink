@@ -143,6 +143,14 @@ final class SlotSchedule
         return $day >= $first->format('Y-m-d') && $day <= $last->format('Y-m-d') && !$this->isEventDate($date);
     }
 
+    /**
+     * The event-local calendar day of an instant (midnight, event timezone).
+     */
+    public function dayOf(\DateTimeInterface $instant): \DateTimeImmutable
+    {
+        return $this->day(\DateTimeImmutable::createFromInterface($instant)->setTimezone($this->timezone)->format('Y-m-d'));
+    }
+
     private function day(string $ymd): \DateTimeImmutable
     {
         return new \DateTimeImmutable($ymd, $this->timezone);

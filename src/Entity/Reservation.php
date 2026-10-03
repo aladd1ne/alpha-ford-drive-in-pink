@@ -6,6 +6,7 @@ namespace App\Entity;
 
 use App\Enum\Experience;
 use App\Enum\ReservationStatus;
+use App\Enum\TestDriveStatus;
 use App\Enum\Vehicle;
 use App\Repository\ReservationRepository;
 use App\Validator\ValidReservation;
@@ -19,11 +20,16 @@ use Symfony\Component\Validator\Constraints as Assert;
  * Slot-based bookings hold a "seat" (1..capacity) for their date + vehicle + slot.
  * The unique constraint on that tuple is what prevents concurrent double bookings;
  * a request without a guaranteed slot (October) or a released booking has a null seat.
+ *
+ * The booking status (status) and the test drive status (testDriveStatus) are separate
+ * columns. Confirming that the drive took place completes the test drive, confirms a
+ * pending booking, and credits the solidarity fund (see FundContribution).
  */
 #[ORM\Entity(repositoryClass: ReservationRepository::class)]
 #[ORM\UniqueConstraint(name: 'uniq_reservation_seat', columns: ['experience', 'reservation_date', 'vehicle', 'slot_start', 'seat'])]
 #[ORM\Index(name: 'idx_reservation_experience_date', columns: ['experience', 'reservation_date'])]
 #[ORM\Index(name: 'idx_reservation_status', columns: ['status'])]
+#[ORM\Index(name: 'idx_reservation_test_drive_status', columns: ['test_drive_status'])]
 #[ValidReservation]
 class Reservation
 {
@@ -73,6 +79,16 @@ class Reservation
 
     #[ORM\Column(length: 20, enumType: ReservationStatus::class)]
     private ReservationStatus $status = ReservationStatus::Pending;
+
+    #[ORM\Column(length: 20, enumType: TestDriveStatus::class, options: ['default' => 'to_validate'])]
+    private TestDriveStatus $testDriveStatus = TestDriveStatus::ToValidate;
+
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $testDriveCompletedAt = null;
+
+    /** E-mail of the commercial who confirmed the test drive. */
+    #[ORM\Column(length: 180, nullable: true)]
+    private ?string $testDriveValidatedBy = null;
 
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
@@ -193,5 +209,56 @@ class Reservation
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    public function getTestDriveStatus(): TestDriveStatus
+    {
+        return $this->testDriveStatus;
+    }
+
+    public function isTestDriveCompleted(): bool
+    {
+        return TestDriveStatus::Completed === $this->testDriveStatus;
+    }
+
+    public function getTestDriveCompletedAt(): ?\DateTimeImmutable
+    {
+        return $this->testDriveCompletedAt;
+    }
+
+    public function getTestDriveValidatedBy(): ?string
+    {
+        return $this->testDriveValidatedBy;
+    }
+
+    /**
+     * Whether this test drive may be confirmed on the given (event-local) day: not yet
+     * validated, not cancelled, and not planned for a later day unless $allowFutureDate
+     * (admin override).
+     */
+    public function canValidateTestDrive(\DateTimeInterface $today, bool $allowFutureDate = false): bool
+    {
+        return !$this->isTestDriveCompleted()
+            && ReservationStatus::Cancelled !== $this->status
+            && null !== $this->date
+            && ($allowFutureDate || $this->date->format('Y-m-d') <= $today->format('Y-m-d'));
+    }
+
+    public function markTestDriveCompleted(\DateTimeImmutable $at, string $validatedBy): static
+    {
+        if ($this->isTestDriveCompleted()) {
+            throw new \LogicException('This test drive is already validated.');
+        }
+
+        $this->testDriveStatus = TestDriveStatus::Completed;
+        $this->testDriveCompletedAt = $at;
+        $this->testDriveValidatedBy = $validatedBy;
+
+        // The customer came: a booking still awaiting confirmation is now confirmed.
+        if (ReservationStatus::Pending === $this->status) {
+            $this->status = ReservationStatus::Confirmed;
+        }
+
+        return $this;
     }
 }

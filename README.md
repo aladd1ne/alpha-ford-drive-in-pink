@@ -35,13 +35,27 @@ A Symfony 6.4 monolith: server-rendered Twig pages, plain CSS (light theme, rose
 | `/reservation/{experience}`               | `reservation_form`         | Booking form (`everest-ranger`, `territory`, `octobre`) |
 | `/reservation/{experience}/confirmation`  | `reservation_confirmation` | Confirmation message (after a submission only)      |
 
-### Back-office (`/admin` — requires `ROLE_ADMIN`)
+### Back-office (`/admin` — requires `ROLE_COMMERCIAL`; `ROLE_ADMIN` inherits it)
 
-| Route                | Description                                         |
-|----------------------|-----------------------------------------------------|
-| `/admin/login`       | Login page                                          |
-| `/admin`             | Dashboard: reservations per experience              |
-| `/admin/reservation` | Reservations list (read-only, filters and search)   |
+| Route                                  | Role              | Description                                                       |
+|----------------------------------------|-------------------|-------------------------------------------------------------------|
+| `/admin/login`                         | public            | Login page                                                        |
+| `/admin`                               | `ROLE_COMMERCIAL` | Dashboard: solidarity fund, test drives to validate today         |
+| `/admin/test-drives`                   | `ROLE_COMMERCIAL` | Today's registrations, "Test drive effectué" action               |
+| `/admin/test-drives/{id}/validate`     | `ROLE_COMMERCIAL` | POST + CSRF: confirms the test drive, credits the fund (once)     |
+| `/admin/reservation`                   | `ROLE_ADMIN`      | All reservations (filters, search) + "Test drive effectué" action |
+| `/admin/commerciaux`                   | `ROLE_ADMIN`      | Create / edit / delete commercial accounts (`ROLE_COMMERCIAL`)    |
+
+### Test drive validation & solidarity fund
+
+- A booking only records the reservation (`reservation.status`); it never credits the fund.
+- When a commercial (or admin) confirms the drive, `reservation.status` goes from `pending` to
+  `confirmed`, `reservation.test_drive_status` becomes `completed`
+  (with `test_drive_completed_at` / `test_drive_validated_by`) and one `fund_contribution` row is
+  written: 10 DT client + 20 DT Alpha Ford = 30 DT, with the date and the commercial's e-mail.
+- Idempotent: a reservation already validated is left unchanged, and the unique
+  `fund_contribution.reservation_id` index rejects any second contribution.
+- Public fund total = `SOLIDARITY_FUND_AMOUNT` (opening amount) + sum of the contributions.
 
 ---
 
@@ -104,20 +118,23 @@ bin/docker-compose exec php bin/console doctrine:migrations:migrate --no-interac
 bin/docker-compose exec php bin/console doctrine:fixtures:load --no-interaction
 ```
 
-This creates a development back-office account:
+This creates development back-office accounts:
 
-| E-mail                 | Password          |
-|------------------------|-------------------|
-| `admin@driveinpink.tn` | `123456789`       |
+| E-mail                      | Password    | Role              |
+|-----------------------------|-------------|-------------------|
+| `admin@driveinpink.tn`      | `123456789` | `ROLE_ADMIN`      |
+| `commercial@driveinpink.tn` | `123456789` | `ROLE_COMMERCIAL` |
 
 ### 6 — Back-office
 
 Open **http://localhost:3200/admin/login** and log in.
 
-### 7 — Create an admin user
+### 7 — Create an admin or commercial user
 
 ```bash
 bin/docker-compose exec php bin/console app:create-admin
+bin/docker-compose exec php bin/console app:create-admin --commercial   # test drive validation only
+# Commercial accounts can also be created by an admin in the back-office: Utilisateurs → Commerciaux.
 # Prompts for the e-mail (domain autocompletes after "@") and the password (hidden, asked twice).
 ```
 

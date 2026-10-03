@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests;
 
+use App\Entity\AdminUser;
 use App\Entity\Reservation;
 use App\Enum\Experience;
 use App\Enum\Vehicle;
@@ -11,7 +12,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\SchemaTool;
 
 /**
- * Fresh schema per test on the SQLite test database, plus a reservation factory.
+ * Fresh schema per test on the SQLite test database, plus reservation / user factories.
  * Use from a KernelTestCase / WebTestCase after the kernel (or client) is booted.
  */
 trait DatabaseTrait
@@ -52,6 +53,22 @@ trait DatabaseTrait
         $em->flush();
 
         return $reservation;
+    }
+
+    /**
+     * Stores a back-office user (the password is not usable: log in with loginUser()).
+     *
+     * @param list<string> $roles
+     */
+    protected function createUser(string $email, array $roles): AdminUser
+    {
+        $user = (new AdminUser())->setEmail($email)->setRoles($roles)->setPassword('!');
+
+        $em = $this->entityManager();
+        $em->persist($user);
+        $em->flush();
+
+        return $user;
     }
 
     /**

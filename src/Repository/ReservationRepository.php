@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\Reservation;
 use App\Enum\Experience;
 use App\Enum\ReservationStatus;
+use App\Enum\TestDriveStatus;
 use App\Enum\Vehicle;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
@@ -111,6 +112,43 @@ class ReservationRepository extends ServiceEntityRepository
         }
 
         return $qb;
+    }
+
+    /**
+     * Commercial "today" list: scopes a reservation query to one day, test drives still
+     * to validate first, then by slot. Works on EasyAdmin's index query (keeps its search
+     * and filter conditions).
+     */
+    public function applyDayScope(QueryBuilder $qb, \DateTimeImmutable $day): QueryBuilder
+    {
+        $alias = $qb->getRootAliases()[0];
+
+        return $qb
+            ->addSelect(sprintf('CASE WHEN %1$s.testDriveStatus = :toValidate AND %1$s.status != :cancelled THEN 0 ELSE 1 END AS HIDDEN validationOrder', $alias))
+            ->andWhere(sprintf('%s.date = :day', $alias))
+            ->setParameter('day', $day, Types::DATE_IMMUTABLE)
+            ->setParameter('toValidate', TestDriveStatus::ToValidate)
+            ->setParameter('cancelled', ReservationStatus::Cancelled)
+            ->orderBy('validationOrder', 'ASC')
+            ->addOrderBy(sprintf('%s.slot', $alias), 'ASC')
+            ->addOrderBy(sprintf('%s.createdAt', $alias), 'ASC');
+    }
+
+    /**
+     * Reservations of one day whose test drive is still to be confirmed.
+     */
+    public function countToValidate(\DateTimeImmutable $day): int
+    {
+        return (int) $this->createQueryBuilder('r')
+            ->select('COUNT(r.id)')
+            ->where('r.date = :day')
+            ->andWhere('r.testDriveStatus = :toValidate')
+            ->andWhere('r.status != :cancelled')
+            ->setParameter('day', $day, Types::DATE_IMMUTABLE)
+            ->setParameter('toValidate', TestDriveStatus::ToValidate)
+            ->setParameter('cancelled', ReservationStatus::Cancelled)
+            ->getQuery()
+            ->getSingleScalarResult();
     }
 
     public static function slotKey(\DateTimeInterface $date, Vehicle $vehicle, string $slot): string

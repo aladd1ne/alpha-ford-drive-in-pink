@@ -4,16 +4,35 @@
 
 {% block main %}
     <div class="dp-admin-stats">
-        {% for experience in experiences %}
-            <div class="dp-admin-stat">
-                <div class="dp-admin-stat__label">{{ experience.label }}</div>
-                <div class="dp-admin-stat__value">{{ counts[experience.value]|default(0) }}</div>
-                <div class="dp-admin-stat__note">{{ experience.hasSlots ? 'créneaux réservés' : 'demandes de rappel' }}</div>
-            </div>
-        {% endfor %}
+        <div class="dp-admin-stat">
+            <div class="dp-admin-stat__label">Cagnotte solidaire</div>
+            <div class="dp-admin-stat__value">{{ fundTotal|number_format(0, ',', ' ') }} DT</div>
+            <div class="dp-admin-stat__note">30 DT par test drive validé</div>
+        </div>
+        <div class="dp-admin-stat">
+            <div class="dp-admin-stat__label">Aujourd’hui</div>
+            <div class="dp-admin-stat__value">{{ toValidateToday }}</div>
+            <div class="dp-admin-stat__note">test drive{{ toValidateToday > 1 ? 's' }} à valider</div>
+        </div>
     </div>
 
-    <a href="{{ ea_url().setController('App\\Controller\\Admin\\ReservationCrudController').setAction('index') }}" class="btn btn-primary">
-        Voir toutes les réservations
+    <a href="{{ ea_url().setController('App\\Controller\\Admin\\TestDriveCrudController').setAction('index') }}" class="btn btn-primary mb-4">
+        Test drives du jour
     </a>
+
+    {% if is_granted('ROLE_ADMIN') %}
+        <div class="dp-admin-stats">
+            {% for experience in experiences %}
+                <div class="dp-admin-stat">
+                    <div class="dp-admin-stat__label">{{ experience.label }}</div>
+                    <div class="dp-admin-stat__value">{{ counts[experience.value]|default(0) }}</div>
+                    <div class="dp-admin-stat__note">{{ experience.hasSlots ? 'créneaux réservés' : 'demandes de rappel' }}</div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <a href="{{ ea_url().setController('App\\Controller\\Admin\\ReservationCrudController').setAction('index') }}" class="btn btn-secondary">
+            Voir toutes les réservations
+        </a>
+    {% endif %}
 {% endblock %}
