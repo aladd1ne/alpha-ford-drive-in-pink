@@ -8,8 +8,9 @@ use Symfony\Contracts\Translation\TranslatableInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
- * Lifecycle of a reservation. Only "pending" is set for now; the back-office will
- * handle confirmation / cancellation (cancelling must also release the seat).
+ * Lifecycle of a reservation. A booking starts "pending" and becomes "confirmed" when
+ * its test drive is validated (Reservation::markTestDriveCompleted()). Cancellation is
+ * not handled yet (cancelling must also release the seat).
  */
 enum ReservationStatus: string implements TranslatableInterface
 {

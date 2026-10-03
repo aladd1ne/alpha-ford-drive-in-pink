@@ -5,7 +5,9 @@ namespace App\Controller\Admin;
 use App\Entity\Reservation;
 use App\Enum\Experience;
 use App\Enum\ReservationStatus;
+use App\Enum\TestDriveStatus;
 use App\Enum\Vehicle;
+use App\Service\Reservation\SlotSchedule;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
@@ -19,14 +21,26 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\TelephoneField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use EasyCorp\Bundle\EasyAdminBundle\Filter\ChoiceFilter;
 use EasyCorp\Bundle\EasyAdminBundle\Filter\DateTimeFilter;
+use Psr\Clock\ClockInterface;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /**
- * Read-only reservation list. Commercial validation (confirm / cancel) comes in the next step.
+ * Read-only list of all reservations (admins). Admins can confirm a test drive from here
+ * too; the action posts to TestDriveCrudController, which does the validation.
  *
  * @extends AbstractCrudController<Reservation>
  */
+#[IsGranted('ROLE_ADMIN')]
 class ReservationCrudController extends AbstractCrudController
 {
+    public function __construct(
+        private readonly UrlGeneratorInterface $urlGenerator,
+        private readonly SlotSchedule $schedule,
+        private readonly ClockInterface $clock,
+    ) {
+    }
+
     public static function getEntityFqcn(): string
     {
         return Reservation::class;
@@ -39,13 +53,20 @@ class ReservationCrudController extends AbstractCrudController
             ->setEntityLabelInPlural('Réservations')
             ->setDefaultSort(['date' => 'ASC', 'slot' => 'ASC', 'createdAt' => 'ASC'])
             ->setSearchFields(['fullName', 'email', 'phone'])
-            ->setPaginatorPageSize(50);
+            ->setPaginatorPageSize(50)
+            ->showEntityActionsInlined();
     }
 
     public function configureActions(Actions $actions): Actions
     {
         return $actions
             ->add(Crud::PAGE_INDEX, Action::DETAIL)
+            ->add(Crud::PAGE_INDEX, TestDriveCrudController::validateAction(
+                $this->urlGenerator,
+                $this->schedule->dayOf($this->clock->now()),
+                // This list is admin-only, and admins may validate before the planned date.
+                allowFutureDate: true,
+            ))
             ->disable(Action::NEW, Action::EDIT, Action::DELETE);
     }
 
@@ -55,7 +76,8 @@ class ReservationCrudController extends AbstractCrudController
             ->add(ChoiceFilter::new('experience', 'Expérience')->setChoices(self::choices(Experience::cases())))
             ->add(DateTimeFilter::new('date', 'Date'))
             ->add(ChoiceFilter::new('vehicle', 'Véhicule')->setChoices(self::choices(Vehicle::cases())))
-            ->add(ChoiceFilter::new('status', 'Statut')->setChoices(self::choices(ReservationStatus::cases())));
+            ->add(ChoiceFilter::new('status', 'Statut')->setChoices(self::choices(ReservationStatus::cases())))
+            ->add(ChoiceFilter::new('testDriveStatus', 'Test drive')->setChoices(self::choices(TestDriveStatus::cases())));
     }
 
     public function configureFields(string $pageName): iterable
@@ -73,13 +95,19 @@ class ReservationCrudController extends AbstractCrudController
             ReservationStatus::Confirmed->name => 'success',
             ReservationStatus::Cancelled->name => 'secondary',
         ]);
+        yield ChoiceField::new('testDriveStatus', 'Test drive')->renderAsBadges([
+            TestDriveStatus::ToValidate->name => 'warning',
+            TestDriveStatus::Completed->name => 'success',
+        ]);
+        yield DateTimeField::new('testDriveCompletedAt', 'Test drive validé le')->setFormat('d MMM yyyy HH:mm')->hideOnIndex();
+        yield TextField::new('testDriveValidatedBy', 'Validé par')->hideOnIndex();
         yield DateTimeField::new('createdAt', 'Reçue le')->setFormat('d MMM yyyy HH:mm');
     }
 
     /**
-     * @param list<Experience|Vehicle|ReservationStatus> $cases
+     * @param list<Experience|Vehicle|ReservationStatus|TestDriveStatus> $cases
      *
-     * @return array<string, Experience|Vehicle|ReservationStatus> label => case
+     * @return array<string, Experience|Vehicle|ReservationStatus|TestDriveStatus> label => case
      */
     private static function choices(array $cases): array
     {

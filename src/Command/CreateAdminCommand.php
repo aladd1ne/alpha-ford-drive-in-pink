@@ -8,22 +8,26 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-#[AsCommand(name: 'app:create-admin', description: 'Create an admin user (interactive)')]
+#[AsCommand(name: 'app:create-admin', description: 'Create an admin user, or a commercial with --commercial (interactive)')]
 class CreateAdminCommand extends Command
 {
-    private const MIN_PASSWORD_LENGTH = 8;
-
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly AdminUserRepository $admins,
         private readonly UserPasswordHasherInterface $passwordHasher,
     ) {
         parent::__construct();
+    }
+
+    protected function configure(): void
+    {
+        $this->addOption('commercial', null, InputOption::VALUE_NONE, 'Create a commercial account (test drive validation only) instead of an admin');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -36,13 +40,16 @@ class CreateAdminCommand extends Command
             return Command::FAILURE;
         }
 
-        $io->title('Create an admin user');
+        $commercial = (bool) $input->getOption('commercial');
+        $kind = $commercial ? 'commercial' : 'admin';
+
+        $io->title(sprintf('Create an %s user', $kind));
 
         $email = $io->askQuestion($this->emailQuestion());
 
         $password = $io->askHidden('Password', function (?string $value): string {
-            if (mb_strlen((string) $value) < self::MIN_PASSWORD_LENGTH) {
-                throw new \RuntimeException(sprintf('The password must contain at least %d characters.', self::MIN_PASSWORD_LENGTH));
+            if (mb_strlen((string) $value) < AdminUser::MIN_PASSWORD_LENGTH) {
+                throw new \RuntimeException(sprintf('The password must contain at least %d characters.', AdminUser::MIN_PASSWORD_LENGTH));
             }
 
             return $value;
@@ -58,13 +65,13 @@ class CreateAdminCommand extends Command
 
         $admin = new AdminUser();
         $admin->setEmail($email);
-        $admin->setRoles(['ROLE_ADMIN']);
+        $admin->setRoles([$commercial ? AdminUser::ROLE_COMMERCIAL : AdminUser::ROLE_ADMIN]);
         $admin->setPassword($this->passwordHasher->hashPassword($admin, $password));
 
         $this->em->persist($admin);
         $this->em->flush();
 
-        $io->success(sprintf('Admin user "%s" created successfully.', $email));
+        $io->success(sprintf('%s user "%s" created successfully.', ucfirst($kind), $email));
 
         return Command::SUCCESS;
     }
