@@ -1,0 +1,61 @@
+{# Reservation detail page: client card + booking and test drive panels, instead of
+   EasyAdmin's long label/value list. Values are rendered by the configured fields
+   (see ReservationCrudController::configureFields), so formats and badges stay in one place. #}
+{# @var entity \EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto #}
+{% extends '@EasyAdmin/crud/detail.html.twig' %}
+
+{% macro value(entity, property) %}
+    {%- set field = entity.fields.getByProperty(property) -%}
+    {%- if field is null or field.value is null -%}
+        <span class="dp-detail__empty">—</span>
+    {%- else -%}
+        {{ include(field.templatePath, {field: field, entity: entity}, with_context: false) }}
+    {%- endif -%}
+{% endmacro %}
+
+{% block content_title %}Réservation n°{{ entity.instance.id }}{% endblock %}
+
+{% block main %}
+    {% set reservation = entity.instance %}
+    {% set initials = reservation.fullName|split(' ')|slice(0, 2)|map(part => part|first|upper)|join %}
+
+    <div class="dp-detail">
+        <section class="dp-detail__hero">
+            <div class="dp-detail__avatar" aria-hidden="true">{{ initials }}</div>
+            <div class="dp-detail__identity">
+                <h2 class="dp-detail__name">{{ reservation.fullName }}</h2>
+                <div class="dp-detail__contact">
+                    <a href="tel:{{ reservation.phone|replace({' ': ''}) }}"><i class="fas fa-phone"></i> {{ reservation.phone }}</a>
+                    <a href="mailto:{{ reservation.email }}"><i class="fas fa-envelope"></i> {{ reservation.email }}</a>
+                </div>
+            </div>
+            <div class="dp-detail__badges">
+                {{ _self.value(entity, 'status') }}
+                {{ _self.value(entity, 'testDriveStatus') }}
+            </div>
+        </section>
+
+        <div class="dp-detail__grid">
+            <section class="dp-detail__card">
+                <h3 class="dp-detail__title"><i class="fas fa-calendar-check"></i> Réservation</h3>
+                <dl class="dp-detail__list">
+                    <div><dt>Expérience</dt><dd>{{ _self.value(entity, 'experience') }}</dd></div>
+                    <div><dt>Véhicule</dt><dd>{{ _self.value(entity, 'vehicle') }}</dd></div>
+                    <div><dt>Date</dt><dd>{{ _self.value(entity, 'date') }}</dd></div>
+                    <div><dt>Créneau</dt><dd>{{ _self.value(entity, 'slot') }}</dd></div>
+                </dl>
+            </section>
+
+            <section class="dp-detail__card">
+                <h3 class="dp-detail__title"><i class="fas fa-flag-checkered"></i> Test drive</h3>
+                <dl class="dp-detail__list">
+                    <div><dt>Statut</dt><dd>{{ _self.value(entity, 'testDriveStatus') }}</dd></div>
+                    <div><dt>Validé le</dt><dd>{{ _self.value(entity, 'testDriveCompletedAt') }}</dd></div>
+                    <div><dt>Validé par</dt><dd>{{ _self.value(entity, 'testDriveValidatedBy') }}</dd></div>
+                </dl>
+            </section>
+        </div>
+
+        <p class="dp-detail__meta"><i class="far fa-clock"></i> Reçue le {{ _self.value(entity, 'createdAt') }}</p>
+    </div>
+{% endblock %}
