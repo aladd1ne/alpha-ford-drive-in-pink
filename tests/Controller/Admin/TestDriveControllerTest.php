@@ -104,7 +104,30 @@ final class TestDriveControllerTest extends WebTestCase
         $future = $this->reload($future);
         self::assertSame(TestDriveStatus::Completed, $future->getTestDriveStatus());
         self::assertSame(ReservationStatus::Confirmed, $future->getStatus());
-        self::assertStringContainsString('Confirmée', $this->client->getCrawler()->filter('table.datagrid')->text());
+        self::assertStringContainsString('Effectué', $this->client->getCrawler()->filter('table.datagrid')->text());
+    }
+
+    public function testAdminSeesTheReservationDetailAndCanValidateFromIt(): void
+    {
+        $reservation = $this->booking('2026-10-09', '09:00', 'Sarra Ben Ali');
+        $this->loginAs(['ROLE_ADMIN']);
+
+        $crawler = $this->client->request('GET', sprintf('/admin/reservation/%d', $reservation->getId()));
+
+        self::assertResponseIsSuccessful();
+        self::assertSelectorTextContains('.dp-detail__name', 'Sarra Ben Ali');
+        self::assertSelectorTextContains('.dp-detail__avatar', 'SB');
+        self::assertCount(1, $crawler->filter('a[href="tel:+21620000000"]'));
+        self::assertCount(1, $crawler->filter('a[href="mailto:client@example.com"]'));
+        $text = $crawler->filter('.dp-detail')->text();
+        foreach (['Territory Experience', 'vendredi 9 octobre 2026', '09:00', 'En attente de confirmation', 'À valider'] as $expected) {
+            self::assertStringContainsString($expected, $text);
+        }
+
+        $this->client->submit($crawler->filter('form.dp-validate-test-drive')->form());
+
+        self::assertResponseRedirects(sprintf('/admin/reservation/%d', $reservation->getId()));
+        self::assertSame(TestDriveStatus::Completed, $this->reload($reservation)->getTestDriveStatus());
     }
 
     public function testReturnUrlOutsideTheBackOfficeIsIgnored(): void
