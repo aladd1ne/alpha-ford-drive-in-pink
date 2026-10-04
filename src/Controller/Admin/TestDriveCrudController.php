@@ -25,6 +25,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Filters;
+use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto;
 use EasyCorp\Bundle\EasyAdminBundle\Dto\SearchDto;
@@ -39,6 +40,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -52,6 +54,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[AdminRoute(path: '/test-drives', name: 'test_drive')]
 class TestDriveCrudController extends AbstractCrudController
 {
+    use ExportsReservationsToExcel;
+
     public const VALIDATE_ACTION = 'validateTestDrive';
     public const VALIDATE_ROUTE = 'admin_test_drive_validate';
 
@@ -100,6 +104,7 @@ class TestDriveCrudController extends AbstractCrudController
     {
         return $actions
             ->add(Crud::PAGE_INDEX, self::validateAction($this->urlGenerator, $this->today()))
+            ->add(Crud::PAGE_INDEX, self::exportExcelAction())
             ->setPermission(self::VALIDATE_ACTION, 'ROLE_COMMERCIAL')
             ->disable(Action::NEW, Action::EDIT, Action::DELETE, Action::BATCH_DELETE, Action::DETAIL);
     }
@@ -175,6 +180,18 @@ class TestDriveCrudController extends AbstractCrudController
         }
 
         return $this->redirect($this->returnUrl($request));
+    }
+
+    /**
+     * Today's list, as shown to the commercial (createIndexQueryBuilder() applies the day scope).
+     *
+     * @param AdminContext<Reservation> $context
+     */
+    #[IsGranted('ROLE_COMMERCIAL')]
+    #[AdminRoute(path: '/export', name: 'export')]
+    public function exportExcel(AdminContext $context): StreamedResponse
+    {
+        return $this->exportReservations($context, 'test-drives');
     }
 
     private function today(): \DateTimeImmutable

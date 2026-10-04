@@ -12,6 +12,7 @@
         "doctrine/doctrine-migrations-bundle": "^3.7",
         "doctrine/orm": "^3.5",
         "easycorp/easyadmin-bundle": "^4",
+        "phpoffice/phpspreadsheet": "^5.10",
         "symfony/asset": "6.4.*",
         "symfony/clock": "6.4.*",
         "symfony/console": "6.4.*",

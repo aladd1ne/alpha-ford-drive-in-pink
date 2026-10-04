@@ -8,10 +8,12 @@ use App\Enum\ReservationStatus;
 use App\Enum\TestDriveStatus;
 use App\Enum\Vehicle;
 use App\Service\Reservation\SlotSchedule;
+use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminRoute;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Filters;
+use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\ChoiceField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateField;
@@ -22,6 +24,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use EasyCorp\Bundle\EasyAdminBundle\Filter\ChoiceFilter;
 use EasyCorp\Bundle\EasyAdminBundle\Filter\DateTimeFilter;
 use Psr\Clock\ClockInterface;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
@@ -34,6 +37,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_ADMIN')]
 class ReservationCrudController extends AbstractCrudController
 {
+    use ExportsReservationsToExcel;
+
     public function __construct(
         private readonly UrlGeneratorInterface $urlGenerator,
         private readonly SlotSchedule $schedule,
@@ -53,6 +58,7 @@ class ReservationCrudController extends AbstractCrudController
             ->setEntityLabelInPlural('Réservations')
             ->setDefaultSort(['date' => 'ASC', 'slot' => 'ASC', 'createdAt' => 'ASC'])
             ->setSearchFields(['fullName', 'email', 'phone'])
+            ->overrideTemplate('crud/detail', 'admin/reservation/detail.html.twig')
             ->setPaginatorPageSize(50)
             ->showEntityActionsInlined();
     }
@@ -61,12 +67,10 @@ class ReservationCrudController extends AbstractCrudController
     {
         return $actions
             ->add(Crud::PAGE_INDEX, Action::DETAIL)
-            ->add(Crud::PAGE_INDEX, TestDriveCrudController::validateAction(
-                $this->urlGenerator,
-                $this->schedule->dayOf($this->clock->now()),
-                // This list is admin-only, and admins may validate before the planned date.
-                allowFutureDate: true,
-            ))
+            ->add(Crud::PAGE_INDEX, self::exportExcelAction())
+            ->add(Crud::PAGE_INDEX, $this->validateAction())
+            ->add(Crud::PAGE_DETAIL, $this->validateAction())
+            ->update(Crud::PAGE_INDEX, Action::DETAIL, static fn (Action $action): Action => $action->setIcon('fas fa-eye')->setLabel(false)->setHtmlAttributes(['title' => 'Voir le détail']))
             ->disable(Action::NEW, Action::EDIT, Action::DELETE);
     }
 
@@ -83,14 +87,15 @@ class ReservationCrudController extends AbstractCrudController
     public function configureFields(string $pageName): iterable
     {
         // Choices come from the enum types; labels from their TranslatableInterface.
-        yield ChoiceField::new('experience', 'Expérience');
-        yield DateField::new('date', 'Date')->setFormat('EEE d MMM');
-        yield TextField::new('slot', 'Créneau');
-        yield ChoiceField::new('vehicle', 'Véhicule');
-        yield TextField::new('fullName', 'Nom et prénom');
+        // The list keeps what is needed to find and call a client; the rest is on the detail page.
+        yield TextField::new('fullName', 'Client');
         yield TelephoneField::new('phone', 'Téléphone');
-        yield EmailField::new('email', 'E-mail');
-        yield ChoiceField::new('status', 'Statut')->renderAsBadges([
+        yield EmailField::new('email', 'E-mail')->hideOnIndex();
+        yield ChoiceField::new('experience', 'Expérience');
+        yield ChoiceField::new('vehicle', 'Véhicule');
+        yield DateField::new('date', 'Date')->setFormat(Crud::PAGE_INDEX === $pageName ? 'EEE d MMM' : 'EEEE d MMMM yyyy');
+        yield TextField::new('slot', 'Créneau');
+        yield ChoiceField::new('status', 'Statut')->hideOnIndex()->renderAsBadges([
             ReservationStatus::Pending->name => 'warning',
             ReservationStatus::Confirmed->name => 'success',
             ReservationStatus::Cancelled->name => 'secondary',
@@ -101,7 +106,26 @@ class ReservationCrudController extends AbstractCrudController
         ]);
         yield DateTimeField::new('testDriveCompletedAt', 'Test drive validé le')->setFormat('d MMM yyyy HH:mm')->hideOnIndex();
         yield TextField::new('testDriveValidatedBy', 'Validé par')->hideOnIndex();
-        yield DateTimeField::new('createdAt', 'Reçue le')->setFormat('d MMM yyyy HH:mm');
+        yield DateTimeField::new('createdAt', 'Reçue le')->setFormat('d MMM yyyy HH:mm')->hideOnIndex();
+    }
+
+    /**
+     * @param AdminContext<Reservation> $context
+     */
+    #[AdminRoute(path: '/export', name: 'export')]
+    public function exportExcel(AdminContext $context): StreamedResponse
+    {
+        return $this->exportReservations($context, 'reservations');
+    }
+
+    private function validateAction(): Action
+    {
+        return TestDriveCrudController::validateAction(
+            $this->urlGenerator,
+            $this->schedule->dayOf($this->clock->now()),
+            // This list is admin-only, and admins may validate before the planned date.
+            allowFutureDate: true,
+        );
     }
 
     /**
