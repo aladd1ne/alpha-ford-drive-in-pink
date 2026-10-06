@@ -1,5 +1,5 @@
 parameters:
-    app.contact_phone: '+216 71 000 000'
+    app.contact_phone: '+216 71 100 600'
     app.solidarity_fund_amount: '%env(int:SOLIDARITY_FUND_AMOUNT)%'
 
 services:

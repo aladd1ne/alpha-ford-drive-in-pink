@@ -48,6 +48,10 @@
                     <p class="dp-event__text">{{ card.text }}</p>
                     {% if full[card.experience] %}
                         <button type="button" class="dp-btn dp-btn--full dp-btn--lg" disabled>Complet</button>
+                    {% elseif closed[card.experience] is defined %}
+                        <a href="{{ path('reservation_form', {experience: card.experience}) }}" data-closed-message="{{ closed[card.experience] }}" class="dp-btn dp-btn--main dp-btn--lg">
+                            {{ card.cta }} <span class="dp-btn__arrow" aria-hidden="true">↗</span>
+                        </a>
                     {% else %}
                         <a data-music-start href="{{ path('reservation_form', {experience: card.experience}) }}" class="dp-btn dp-btn--main dp-btn--lg">
                             {{ card.cta }} <span class="dp-btn__arrow" aria-hidden="true">↗</span>

@@ -50,17 +50,17 @@ final class SlotAvailabilityTest extends KernelTestCase
     {
         $saturday = new \DateTimeImmutable('2026-10-10');
 
-        self::assertSame(1, $this->availability->remaining(Experience::EverestRanger, $saturday, Vehicle::EverestXlt, '13:30'));
+        self::assertSame(1, $this->availability->remaining(Experience::EverestRanger, $saturday, Vehicle::EverestXlt, '12:00'));
         self::assertSame(0, $this->availability->remaining(Experience::EverestRanger, $saturday, Vehicle::EverestXlt, '14:15'));
         self::assertArrayNotHasKey('14:15', $this->availability->remainingMap(Experience::EverestRanger)['2026-10-10']['everest_xlt']);
     }
 
     public function testExperienceIsFullOnlyWhenEverySlotIsTaken(): void
     {
-        $this->fillExperience(Experience::Territory, except: ['2026-10-24|13:30']);
+        $this->fillExperience(Experience::Territory, except: ['2026-10-24|12:00']);
         self::assertFalse($this->availability->isFull(Experience::Territory));
 
-        $this->createBooking(Experience::Territory, '2026-10-24', Vehicle::Territory, '13:30');
+        $this->createBooking(Experience::Territory, '2026-10-24', Vehicle::Territory, '12:00');
         self::assertTrue($this->availability->isFull(Experience::Territory));
 
         // The other experiences are not affected.

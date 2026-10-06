@@ -21,6 +21,7 @@ use Symfony\Component\Routing\Requirement\EnumRequirement;
 class ReservationController extends AbstractController
 {
     private const SUCCESS_FLASH = 'reservation_success';
+    private const CLOSED_FLASH = 'reservation_closed';
 
     public function __construct(
         private readonly SlotAvailability $availability,
@@ -31,12 +32,20 @@ class ReservationController extends AbstractController
     {
         return $this->render('reservation/index.html.twig', [
             'full' => $this->fullExperiences(),
+            'closed' => $this->availability->openingMessages(),
         ]);
     }
 
     #[Route('/{experience}', name: 'reservation_form', requirements: ['experience' => new EnumRequirement(Experience::class)], methods: ['GET', 'POST'])]
     public function form(Experience $experience, Request $request, ReservationBooker $booker, ClockInterface $clock): Response
     {
+        // Not open yet: back to the hub, where base.html.twig shows the message in a pop-up.
+        if (null !== $message = $this->availability->openingMessage($experience)) {
+            $this->addFlash(self::CLOSED_FLASH, $message);
+
+            return $this->redirectToRoute('reservation');
+        }
+
         $full = $this->availability->isFull($experience);
         $reservation = new Reservation($experience, $clock->now());
         $form = $this->createForm(ReservationType::class, $reservation, ['experience' => $experience]);

@@ -139,7 +139,6 @@
                         {{ experience.hasSlots ? 'Réserver mon créneau' : 'Envoyer ma demande' }}
                         <span class="dp-btn__arrow" aria-hidden="true">↗</span>
                     </button>
-                    <a href="{{ path('reservation') }}" class="dp-form__back">← Autres formules</a>
                 </div>
             {{ form_end(form) }}
         {% endif %}
@@ -147,6 +146,14 @@
 </main>
 {% endblock %}
 
+{% block stylesheets %}
+    {% if not experience.hasSlots %}<link rel="stylesheet" href="{{ asset('css/vendor/flatpickr.min.css') }}">{% endif %}
+{% endblock %}
+
 {% block scripts %}
+    {% if not experience.hasSlots %}
+        <script src="{{ asset('js/vendor/flatpickr.min.js') }}" defer></script>
+        <script src="{{ asset('js/vendor/flatpickr-fr.js') }}" defer></script>
+    {% endif %}
     <script src="{{ asset('js/reservation.js') }}" defer></script>
 {% endblock %}

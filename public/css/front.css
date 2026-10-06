@@ -1345,3 +1345,29 @@ img { display: block; max-width: 100%; }
     .is-bumped .dp-fund__value { animation: none; }
     html { scroll-behavior: auto; }
 }
+
+/* "Autres jours d'octobre" calendar (flatpickr): unavailable days are greyed out and struck through. */
+.dp-calendar__value { margin-bottom: 12px; cursor: default; }
+.flatpickr-calendar.inline { box-shadow: none; border: 1px solid rgba(0, 0, 0, .15); border-radius: var(--radius); max-width: 100%; }
+.flatpickr-calendar .flatpickr-day.selected,
+.flatpickr-calendar .flatpickr-day.selected:hover { background: var(--main); border-color: var(--main); }
+.flatpickr-calendar .flatpickr-day:hover:not(.flatpickr-disabled):not(.selected) { background: var(--gray); border-color: var(--gray); }
+.flatpickr-calendar .flatpickr-day.today:not(.selected) { border-color: var(--main-soft); }
+.flatpickr-calendar .flatpickr-day.flatpickr-disabled,
+.flatpickr-calendar .flatpickr-day.flatpickr-disabled:hover { color: rgba(33, 20, 25, .25); text-decoration: line-through; background: transparent; cursor: not-allowed; }
+
+/* "Inscriptions pas encore ouvertes" pop-up (templates/base.html.twig). */
+.dp-modal {
+    margin: auto;
+    width: min(440px, calc(100% - 32px));
+    padding: 32px 28px 28px;
+    border: 0;
+    border-radius: var(--radius);
+    background: var(--bg);
+    color: var(--text);
+    text-align: center;
+    box-shadow: 0 24px 60px rgba(33, 20, 25, .25);
+}
+.dp-modal::backdrop { background: rgba(33, 20, 25, .55); }
+.dp-modal__title { font-family: var(--font-head); font-size: 22px; font-weight: 700; color: var(--main); margin-bottom: 10px; }
+.dp-modal__message { color: var(--sub); margin-bottom: 24px; }
