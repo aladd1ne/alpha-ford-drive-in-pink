@@ -84,7 +84,11 @@ final class ReservationType extends AbstractType
             'label' => 'Date souhaitée',
             'widget' => 'single_text',
             'input' => 'datetime_immutable',
-            'attr' => ['min' => $min->format('Y-m-d'), 'max' => $last->format('Y-m-d')],
+            'attr' => [
+                'min' => $min->format('Y-m-d'),
+                'max' => $last->format('Y-m-d'),
+                'data-closed-dates' => json_encode($this->closedRequestDates()),
+            ],
         ]);
         $this->addVehicle($builder, $experience, 'Véhicule souhaité');
     }
@@ -105,6 +109,23 @@ final class ReservationType extends AbstractType
             'choice_label' => static fn (Vehicle $vehicle): string => $vehicle->label(),
             'expanded' => true,
         ]);
+    }
+
+    /**
+     * Days of the request month the browser should refuse besides weekends (closed + event days).
+     *
+     * @return list<string>
+     */
+    private function closedRequestDates(): array
+    {
+        $days = $this->schedule->requestClosedDates();
+        foreach (Experience::cases() as $experience) {
+            foreach ($this->schedule->dates($experience) as $date) {
+                $days[] = $date->format('Y-m-d');
+            }
+        }
+
+        return array_values(array_unique($days));
     }
 
     private function formatDay(\DateTimeInterface $date): string

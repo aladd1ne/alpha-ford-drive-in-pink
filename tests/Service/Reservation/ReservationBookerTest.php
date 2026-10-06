@@ -112,7 +112,7 @@ final class ReservationBookerTest extends KernelTestCase
             ->setFullName('Client Test')
             ->setPhone('+216 20 000 000')
             ->setEmail('client@example.com')
-            ->setDate(new \DateTimeImmutable('2026-10-15'))
+            ->setDate(new \DateTimeImmutable('2026-10-14'))
             ->setVehicle(Vehicle::Advice);
 
         $this->booker()->book($request);
@@ -143,6 +143,7 @@ final class ReservationBookerTest extends KernelTestCase
             $container->getParameter('app.reservation.slots'),
             $experiences,
             $container->getParameter('app.reservation.request_month'),
+            $container->getParameter('app.reservation.request_closed_dates'),
         );
     }
 

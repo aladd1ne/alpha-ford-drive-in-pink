@@ -77,6 +77,36 @@ final class SlotAvailability
         return true;
     }
 
+    /**
+     * Pop-up text while bookings are not open yet ("…à partir du 19 octobre."), null once open.
+     */
+    public function openingMessage(Experience $experience): ?string
+    {
+        $opensAt = $this->schedule->opensAt($experience);
+        if (null === $opensAt || $opensAt <= $this->clock->now()) {
+            return null;
+        }
+
+        $formatter = new \IntlDateFormatter('fr_FR', \IntlDateFormatter::NONE, \IntlDateFormatter::NONE, $this->schedule->timezone(), null, 'd MMMM');
+
+        return sprintf('Les inscriptions seront ouvertes à partir du %s.', $formatter->format($opensAt));
+    }
+
+    /**
+     * @return array<string, string> experience slug => opening message, for the experiences not open yet
+     */
+    public function openingMessages(): array
+    {
+        $messages = [];
+        foreach (Experience::cases() as $experience) {
+            if (null !== $message = $this->openingMessage($experience)) {
+                $messages[$experience->value] = $message;
+            }
+        }
+
+        return $messages;
+    }
+
     public function hasStarted(\DateTimeInterface $date, string $slot): bool
     {
         return $this->schedule->slotStartsAt($date, $slot) <= $this->clock->now();

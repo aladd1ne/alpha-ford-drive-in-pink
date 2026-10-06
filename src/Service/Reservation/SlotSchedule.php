@@ -18,7 +18,7 @@ final class SlotSchedule
 
     /**
      * @param list<string>                                                      $slots       "HH:MM-HH:MM"
-     * @param array<string, array{capacity?: int, dates: array<string, string>}> $experiences slug => config
+     * @param array<string, array{capacity?: int, opens_at?: string, dates: array<string, string>}> $experiences slug => config
      */
     public function __construct(
         #[Autowire(param: 'app.reservation.slots')]
@@ -27,6 +27,9 @@ final class SlotSchedule
         private readonly array $experiences,
         #[Autowire(param: 'app.reservation.request_month')]
         private readonly string $requestMonth,
+        /** @var list<string> "Y-m-d" days refused by the request form */
+        #[Autowire(param: 'app.reservation.request_closed_dates')]
+        private readonly array $requestClosedDates,
         #[Autowire(param: 'app.reservation.timezone')]
         string $timezone = 'Africa/Tunis',
     ) {
@@ -45,6 +48,16 @@ final class SlotSchedule
         }
 
         return max(0, (int) ($this->experiences[$experience->value]['capacity'] ?? 1));
+    }
+
+    /**
+     * First day bookings are accepted (midnight, event timezone), null when always open.
+     */
+    public function opensAt(Experience $experience): ?\DateTimeImmutable
+    {
+        $day = $this->experiences[$experience->value]['opens_at'] ?? null;
+
+        return null === $day ? null : $this->day($day);
     }
 
     /**
@@ -133,14 +146,26 @@ final class SlotSchedule
     }
 
     /**
-     * Date accepted by the "autres jours d'octobre" form (ignores "today", see validator).
+     * Date accepted by the "autres jours d'octobre" form: a weekday of the request month,
+     * outside event days and closed dates (ignores "today", see validator).
      */
     public function isRequestDate(\DateTimeInterface $date): bool
     {
         [$first, $last] = $this->requestPeriod();
         $day = $date->format('Y-m-d');
 
-        return $day >= $first->format('Y-m-d') && $day <= $last->format('Y-m-d') && !$this->isEventDate($date);
+        return $day >= $first->format('Y-m-d') && $day <= $last->format('Y-m-d')
+            && (int) $date->format('N') < 6
+            && !\in_array($day, $this->requestClosedDates, true)
+            && !$this->isEventDate($date);
+    }
+
+    /**
+     * @return list<string> "Y-m-d" days refused by the request form besides weekends and event days
+     */
+    public function requestClosedDates(): array
+    {
+        return $this->requestClosedDates;
     }
 
     /**

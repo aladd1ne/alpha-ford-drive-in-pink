@@ -10,6 +10,7 @@ use App\Enum\Vehicle;
 use App\Tests\DatabaseTrait;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Clock\MockClock;
 
 final class ReservationControllerTest extends WebTestCase
 {
@@ -98,14 +99,28 @@ final class ReservationControllerTest extends WebTestCase
         self::assertSelectorTextContains('.dp-form', 'Adresse e-mail invalide.');
     }
 
+    public function testTerritoryIsClosedUntilOpeningDay(): void
+    {
+        $crawler = $this->client->request('GET', '/');
+        self::assertSame('Les inscriptions seront ouvertes à partir du 19 octobre.', $crawler->filter('a[href="/reservation/territory"]')->attr('data-closed-message'));
+        self::assertNull($crawler->filter('a[href="/reservation/everest-ranger"]')->attr('data-closed-message'));
+
+        $this->client->request('GET', '/reservation/territory');
+        self::assertResponseRedirects('/reservation');
+        $this->client->followRedirect();
+        self::assertSelectorExists('dialog[data-closed-modal][data-open]');
+        self::assertSelectorTextContains('[data-closed-modal-message]', 'Les inscriptions seront ouvertes à partir du 19 octobre.');
+    }
+
     public function testTerritoryBookingNeedsNoVehicleChoice(): void
     {
+        $this->openTerritory();
         $crawler = $this->client->request('GET', '/reservation/territory');
         self::assertCount(0, $crawler->filter('input[name="reservation[vehicle]"]'));
 
         $this->submit('territory', 'Réserver mon créneau', [
             'reservation[date]' => '2026-10-24',
-            'reservation[slot]' => '13:30',
+            'reservation[slot]' => '12:00',
         ]);
 
         self::assertResponseRedirects('/reservation/territory/confirmation');
@@ -118,7 +133,7 @@ final class ReservationControllerTest extends WebTestCase
     public function testOctoberRequestIsConfirmed(): void
     {
         $this->submit('octobre', 'Envoyer ma demande', [
-            'reservation[date]' => '2026-10-15',
+            'reservation[date]' => '2026-10-14',
             'reservation[vehicle]' => 'advice',
         ]);
 
@@ -130,14 +145,14 @@ final class ReservationControllerTest extends WebTestCase
 
     public function testOctoberRequestRefusesEventDaysAndOtherMonths(): void
     {
-        foreach (['2026-10-23', '2026-11-05'] as $day) {
+        foreach (['2026-10-23', '2026-11-05', '2026-10-17', '2026-10-15'] as $day) {
             $this->submit('octobre', 'Envoyer ma demande', [
                 'reservation[date]' => $day,
                 'reservation[vehicle]' => 'territory',
             ]);
 
             self::assertResponseStatusCodeSame(422, $day);
-            self::assertSelectorTextContains('.dp-form', 'Choisissez un jour d’octobre en dehors des journées');
+            self::assertSelectorTextContains('.dp-form', 'Choisissez un jour de semaine d’octobre (hors week-ends et 15 octobre), en dehors des journées');
         }
 
         $this->submit('octobre', 'Envoyer ma demande', [
@@ -151,12 +166,13 @@ final class ReservationControllerTest extends WebTestCase
 
     public function testFullExperienceShowsCompleteButton(): void
     {
+        $this->openTerritory();
         $this->fillExperience(Experience::Territory);
 
         $crawler = $this->client->request('GET', '/reservation');
         self::assertCount(0, $crawler->filter('a[href="/reservation/territory"]'));
         self::assertSelectorTextContains('button[disabled]', 'Complet');
-        self::assertCount(1, $crawler->filter('a[href="/reservation/everest-ranger"]'));
+        self::assertCount(1, $crawler->filter('a[href="/reservation/octobre"]'));
 
         $crawler = $this->client->request('GET', '/reservation/territory');
         self::assertCount(0, $crawler->filter('form.dp-form'));
@@ -168,9 +184,21 @@ final class ReservationControllerTest extends WebTestCase
 
     public function testConfirmationPageNeedsASubmission(): void
     {
+        $this->openTerritory();
         $this->client->request('GET', '/reservation/territory/confirmation');
 
         self::assertResponseRedirects('/reservation/territory');
+    }
+
+    /**
+     * Territory bookings open on 19 October: move the frozen clock there (slots of the 23-24 stay ahead).
+     */
+    private function openTerritory(): void
+    {
+        $this->client->disableReboot();
+        /** @var MockClock $clock */
+        $clock = static::getContainer()->get('clock');
+        $clock->modify('2026-10-19 08:00:00');
     }
 
     /**

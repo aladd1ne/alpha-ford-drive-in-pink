@@ -24,7 +24,7 @@
 
     const checked = (name) => form.querySelector(`input[name$="[${name}]"]:checked`);
     const dateValue = () => checked('date')?.value
-        ?? (form.querySelector('input[type="date"][name$="[date]"]')?.value || null);
+        ?? (form.querySelector('input[name$="[date]"]:not([type="radio"])')?.value || null);
     const slotsLeft = (date, vehicle) => map[date]?.[vehicle] ?? {};
 
     function setStep(name, locked, message) {
@@ -122,6 +122,29 @@
             refresh();
         }
     });
+
+    // "Autres jours d'octobre": calendar with weekends, closed days and event days greyed out
+    // (the server refuses them too).
+    const dateInput = form.querySelector('input[type="date"][name$="[date]"]');
+    if (dateInput && window.flatpickr) {
+        const closed = JSON.parse(dateInput.dataset.closedDates || '[]');
+        dateInput.type = 'text';
+        dateInput.dataset.calendar = '';
+        const picker = window.flatpickr(dateInput, {
+            locale: window.flatpickr.l10ns.fr,
+            dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'l j F Y',
+            altInputClass: 'dp-input dp-calendar__value',
+            minDate: dateInput.min,
+            maxDate: dateInput.max,
+            inline: true,
+            disableMobile: true,
+            disable: [(date) => date.getDay() === 0 || date.getDay() === 6, ...closed],
+            onChange: refresh,
+        });
+        picker.altInput.placeholder = 'Choisissez une date dans le calendrier';
+    }
     refresh();
 })();
 
@@ -174,7 +197,8 @@
             return [...radios].some((radio) => radio.checked);
         }
 
-        return [...step.querySelectorAll('input')].every((input) => input.checkValidity());
+        return [...step.querySelectorAll('input')].every((input) => input.checkValidity())
+            && [...step.querySelectorAll('[data-calendar]')].every((input) => input.value !== '');
     }
 
     function explain(step) {
@@ -182,6 +206,13 @@
         if (radios.length) {
             const error = step.querySelector('.dp-wizard__error');
             error.textContent = 'Veuillez faire un choix pour continuer.';
+            error.hidden = false;
+
+            return;
+        }
+        if ([...step.querySelectorAll('[data-calendar]')].some((input) => input.value === '')) {
+            const error = step.querySelector('.dp-wizard__error');
+            error.textContent = 'Veuillez choisir une date dans le calendrier.';
             error.hidden = false;
 
             return;
@@ -194,7 +225,7 @@
     }
 
     function renderRecap() {
-        const dateInput = form.querySelector('input[type="date"][name$="[date]"]');
+        const dateInput = form.querySelector('input[name$="[date]"]:not([type="radio"])');
         let date = text('input[name$="[date]"]:checked');
         if (!date && dateInput?.value) {
             date = new Date(`${dateInput.value}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });

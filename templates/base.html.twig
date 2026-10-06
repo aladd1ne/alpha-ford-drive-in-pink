@@ -72,8 +72,8 @@
 
             <div class="dp-footer__bottom" data-reveal>
                 <p>
-                    © {{ "now"|date("Y") }} Comp'pacte. Tous droits réservés.
-                    <span class="dp-footer__credit">Conçu et développé par <strong>Comp'pacte</strong></span>
+                    © {{ "now"|date("Y") }} Com'pacte. Tous droits réservés.
+                    <span class="dp-footer__credit">Conçu et développé par <strong>Com'pacte</strong></span>
                 </p>
                 <div class="dp-footer__links">
                     <a href="{{ path('home') }}">Accueil</a>
@@ -84,6 +84,17 @@
             </div>
         </div>
     </footer>
+
+    {# "Inscriptions pas encore ouvertes" pop-up: opened by [data-closed-message] links or after a redirect. #}
+    {% set closed_message = app.flashes('reservation_closed')|first %}
+    <dialog class="dp-modal" data-closed-modal{% if closed_message %} data-open{% endif %} aria-labelledby="dp-modal-title">
+        <p class="dp-modal__title" id="dp-modal-title">Bientôt disponible</p>
+        <p class="dp-modal__message" data-closed-modal-message>{{ closed_message }}</p>
+        <form method="dialog">
+            <button type="submit" class="dp-btn dp-btn--main">D’accord</button>
+        </form>
+    </dialog>
+    <script src="{{ asset('js/closed-modal.js') }}" defer></script>
 
     <script src="{{ asset('js/vendor/gsap.min.js') }}" defer></script>
     <script src="{{ asset('js/vendor/ScrollTrigger.min.js') }}" defer></script>

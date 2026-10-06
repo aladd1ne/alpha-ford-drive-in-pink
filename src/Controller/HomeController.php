@@ -24,6 +24,7 @@ class HomeController extends AbstractController
                 Experience::EverestRanger->value => $availability->isFull(Experience::EverestRanger),
                 Experience::Territory->value => $availability->isFull(Experience::Territory),
             ],
+            'closed' => $availability->openingMessages(),
         ]);
     }
 }
