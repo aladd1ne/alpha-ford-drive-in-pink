@@ -21,7 +21,16 @@ class AdminUser implements UserInterface, PasswordAuthenticatedUserInterface
     private ?int $id = null;
 
     public const ROLE_ADMIN = 'ROLE_ADMIN';
+    /** Back-office access, implied by the staff roles below (see security.yaml). */
     public const ROLE_COMMERCIAL = 'ROLE_COMMERCIAL';
+    public const ROLE_RESERVATIONS = 'ROLE_RESERVATIONS';
+    public const ROLE_CASHIER = 'ROLE_CASHIER';
+
+    /** Staff roles an admin can give, with their labels. */
+    public const STAFF_ROLES = [
+        self::ROLE_RESERVATIONS => 'Gestion des réservations',
+        self::ROLE_CASHIER => 'Encaissement',
+    ];
     public const MIN_PASSWORD_LENGTH = 8;
 
     #[ORM\Column(length: 255, unique: true)]
@@ -73,11 +82,32 @@ class AdminUser implements UserInterface, PasswordAuthenticatedUserInterface
     public function setPlainPassword(?string $plainPassword): static { $this->plainPassword = $plainPassword; return $this; }
 
     /**
-     * Commercial account: ROLE_COMMERCIAL without any admin role.
+     * Staff account (reservations and/or cashier, or the former commercial role) without any admin role.
      */
     public function isCommercialOnly(): bool
     {
-        return \in_array(self::ROLE_COMMERCIAL, $this->roles, true) && !\in_array(self::ROLE_ADMIN, $this->roles, true);
+        return [] !== array_intersect([self::ROLE_COMMERCIAL, ...array_keys(self::STAFF_ROLES)], $this->roles)
+            && !\in_array(self::ROLE_ADMIN, $this->roles, true);
+    }
+
+    /**
+     * The staff roles held (form field of the back-office user page).
+     *
+     * @return list<string>
+     */
+    public function getStaffRoles(): array
+    {
+        return array_values(array_intersect($this->roles, array_keys(self::STAFF_ROLES)));
+    }
+
+    /**
+     * @param list<string> $staffRoles
+     */
+    public function setStaffRoles(array $staffRoles): static
+    {
+        $this->roles = array_values(array_intersect($staffRoles, array_keys(self::STAFF_ROLES)));
+
+        return $this;
     }
 
     public function eraseCredentials(): void { $this->plainPassword = null; }

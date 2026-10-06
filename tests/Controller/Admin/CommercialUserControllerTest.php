@@ -30,7 +30,7 @@ final class CommercialUserControllerTest extends WebTestCase
 
         $user = $this->findUser('vente@alphaford.tn');
         self::assertNotNull($user);
-        self::assertSame([AdminUser::ROLE_COMMERCIAL, 'ROLE_USER'], $user->getRoles());
+        self::assertSame([AdminUser::ROLE_CASHIER, 'ROLE_USER'], $user->getRoles());
         self::assertTrue($user->isCommercialOnly());
         self::assertNotSame('secret-pass', $user->getPassword());
         self::assertTrue(static::getContainer()->get('security.user_password_hasher')->isPasswordValid($user, 'secret-pass'));
@@ -80,7 +80,7 @@ final class CommercialUserControllerTest extends WebTestCase
 
     public function testEditKeepsThePasswordWhenLeftBlank(): void
     {
-        $commercial = $this->createUser('vente@alphaford.tn', [AdminUser::ROLE_COMMERCIAL]);
+        $commercial = $this->createUser('vente@alphaford.tn', [AdminUser::ROLE_CASHIER]);
         $hash = $commercial->getPassword();
         $this->loginAs('admin@alphaford.tn', [AdminUser::ROLE_ADMIN]);
 
@@ -94,6 +94,35 @@ final class CommercialUserControllerTest extends WebTestCase
         self::assertNotNull($user);
         self::assertSame($hash, $user->getPassword());
         self::assertTrue($user->isCommercialOnly());
+    }
+
+    public function testAdminGivesBothStaffRoles(): void
+    {
+        $member = $this->createUser('vente@alphaford.tn', [AdminUser::ROLE_CASHIER]);
+        $this->loginAs('admin@alphaford.tn', [AdminUser::ROLE_ADMIN]);
+
+        $crawler = $this->client->request('GET', sprintf('/admin/commerciaux/%d/edit', $member->getId()));
+        $form = $crawler->filter('form#edit-AdminUser-form')->form();
+        $form['AdminUser[staffRoles]'][0]->tick();
+        $form['AdminUser[staffRoles]'][1]->tick();
+        $this->client->submit($form);
+
+        self::assertResponseRedirects();
+        self::assertEqualsCanonicalizing([AdminUser::ROLE_RESERVATIONS, AdminUser::ROLE_CASHIER], $this->findUser('vente@alphaford.tn')->getStaffRoles());
+    }
+
+    public function testAStaffRoleIsRequired(): void
+    {
+        $member = $this->createUser('vente@alphaford.tn', [AdminUser::ROLE_CASHIER]);
+        $this->loginAs('admin@alphaford.tn', [AdminUser::ROLE_ADMIN]);
+
+        $crawler = $this->client->request('GET', sprintf('/admin/commerciaux/%d/edit', $member->getId()));
+        $form = $crawler->filter('form#edit-AdminUser-form')->form();
+        $form['AdminUser[staffRoles]'][1]->untick();
+        $this->client->submit($form);
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('#edit-AdminUser-form', 'Choisissez au moins un rôle.');
     }
 
     public function testAdminAccountsCannotBeEditedOrDeletedHere(): void

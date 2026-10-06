@@ -65,20 +65,20 @@ final class ReservationExportTest extends WebTestCase
     {
         $this->booking('2026-10-01', '09:00', 'Sarra Ben Ali');
         $this->booking('2026-10-02', '10:00', 'Demain Client');
-        $this->loginAs(['ROLE_COMMERCIAL']);
+        $this->loginAs(['ROLE_CASHIER']);
 
         $crawler = $this->client->request('GET', '/admin/test-drives');
         $button = $crawler->filter('a.btn-success:contains("Exporter Excel")');
         self::assertCount(1, $button);
 
-        $rows = $this->download((string) $button->attr('href'), 'test-drives-');
+        $rows = $this->download((string) $button->attr('href'), 'encaissement-2026-10-01-');
         self::assertCount(2, $rows);
         self::assertSame('Sarra Ben Ali', $rows[1][4]);
     }
 
     public function testCommercialCannotExportTheFullReservationList(): void
     {
-        $this->loginAs(['ROLE_COMMERCIAL']);
+        $this->loginAs(['ROLE_CASHIER']);
 
         $this->client->request('GET', '/admin/reservation/export');
 

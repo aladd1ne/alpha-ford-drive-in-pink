@@ -25,12 +25,12 @@
             <li class="dp-cagnotte__stat dp-cagnotte__stat--main">
                 <span class="dp-cagnotte__stat-value" data-fund="testDrives">{{ fund.testDrives }}</span>
                 <span class="dp-cagnotte__stat-label" data-fund-label="testDrives" data-one="test drive validé" data-many="test drives validés">{{ fund.testDrives > 1 ? 'test drives validés' : 'test drive validé' }}</span>
-                <span class="dp-cagnotte__stat-note">{{ amountPerTestDrive }} DT chacun</span>
+                <span class="dp-cagnotte__stat-note">{{ alphaFordShare }} DT d’Alpha Ford pour chacun</span>
             </li>
             <li class="dp-cagnotte__stat">
                 <span class="dp-cagnotte__stat-value"><span data-fund="clientAmount">{{ fund.clientAmount|number_format(0, ',', ' ') }}</span> DT</span>
                 <span class="dp-cagnotte__stat-label">versés par les clients</span>
-                <span class="dp-cagnotte__stat-note">{{ clientShare }} DT par essai</span>
+                <span class="dp-cagnotte__stat-note">montants reçus lors des essais</span>
             </li>
             <li class="dp-cagnotte__stat">
                 <span class="dp-cagnotte__stat-value"><span data-fund="alphaFordAmount">{{ fund.alphaFordAmount|number_format(0, ',', ' ') }}</span> DT</span>
@@ -40,7 +40,7 @@
             <li class="dp-cagnotte__stat" data-fund-show-if="otherAmount" {{ fund.otherAmount ? '' : 'hidden' }}>
                 <span class="dp-cagnotte__stat-value"><span data-fund="otherAmount">{{ fund.otherAmount|number_format(0, ',', ' ') }}</span> DT</span>
                 <span class="dp-cagnotte__stat-label">autres contributions</span>
-                <span class="dp-cagnotte__stat-note">collectées hors du site</span>
+                <span class="dp-cagnotte__stat-note">dons et collectes sur place</span>
             </li>
         </ul>
 

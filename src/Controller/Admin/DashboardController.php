@@ -13,6 +13,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Dashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Config\MenuItem;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Option\ColorScheme;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractDashboardController;
+use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -24,6 +25,7 @@ class DashboardController extends AbstractDashboardController
         private readonly SolidarityFund $fund,
         private readonly SlotSchedule $schedule,
         private readonly ClockInterface $clock,
+        private readonly AdminUrlGenerator $adminUrlGenerator,
     ) {}
 
     #[Route('/admin', name: 'admin')]
@@ -56,17 +58,38 @@ class DashboardController extends AbstractDashboardController
     public function configureMenuItems(): iterable
     {
         yield MenuItem::linkToDashboard('Tableau de bord', 'fas fa-chart-bar');
-        yield MenuItem::section('Test drives');
-        yield MenuItem::linkTo(TestDriveCrudController::class, 'Test drives du jour', 'fas fa-flag-checkered')
-            ->setPermission('ROLE_COMMERCIAL');
-        yield MenuItem::linkTo(ReservationCrudController::class, 'Réservations', 'fas fa-calendar-check')
-            ->setPermission('ROLE_ADMIN');
+        yield MenuItem::section('Réservations')->setPermission('ROLE_RESERVATIONS');
+        yield MenuItem::linkTo(ReservationCrudController::class, 'Toutes les réservations', 'fas fa-calendar-check')
+            ->setPermission('ROLE_RESERVATIONS');
+        yield MenuItem::linkToUrl('Demandes d’octobre', 'fas fa-calendar-plus', $this->octoberRequestsUrl())
+            ->setPermission('ROLE_RESERVATIONS');
+        yield MenuItem::section('Encaissement')->setPermission('ROLE_CASHIER');
+        yield MenuItem::linkTo(TestDriveCrudController::class, 'Test drives à encaisser', 'fas fa-cash-register')
+            ->setPermission('ROLE_CASHIER');
+        yield MenuItem::linkToRoute('Ajouter un test drive', 'fas fa-plus', TestDriveCrudController::ADD_ROUTE)
+            ->setPermission('ROLE_CASHIER');
+        yield MenuItem::linkTo(FundContributionCrudController::class, 'Historique de la cagnotte', 'fas fa-coins')
+            ->setPermission('ROLE_CASHIER');
+        yield MenuItem::linkToRoute('Ajouter un montant', 'fas fa-hand-holding-dollar', FundContributionCrudController::ADD_ROUTE)
+            ->setPermission('ROLE_CASHIER');
         yield MenuItem::section('Utilisateurs')->setPermission('ROLE_ADMIN');
-        yield MenuItem::linkTo(CommercialUserCrudController::class, 'Commerciaux', 'fas fa-user-tie')
+        yield MenuItem::linkTo(CommercialUserCrudController::class, 'Équipe', 'fas fa-user-tie')
             ->setPermission('ROLE_ADMIN');
         yield MenuItem::section('');
         yield MenuItem::linkToRoute('Cagnotte en direct', 'fas fa-hand-holding-heart', 'fund')->setLinkTarget('_blank');
         yield MenuItem::linkToRoute('Voir le site', 'fas fa-globe', 'home')->setLinkTarget('_blank');
+    }
+
+    /**
+     * Reservation list filtered on the "autres jours d'octobre" experience.
+     */
+    private function octoberRequestsUrl(): string
+    {
+        return $this->adminUrlGenerator->unsetAll()
+            ->setController(ReservationCrudController::class)
+            ->setAction('index')
+            ->set('filters', ['experience' => ['comparison' => '=', 'value' => Experience::October->value]])
+            ->generateUrl();
     }
 
     public function configureAssets(): Assets

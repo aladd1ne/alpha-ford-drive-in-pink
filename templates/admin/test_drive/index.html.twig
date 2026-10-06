@@ -1,0 +1,15 @@
+{# Cashier list: one tab per event day (+ today), above EasyAdmin's list. #}
+{% extends '@EasyAdmin/crud/index.html.twig' %}
+
+{% block main %}
+    <ul class="nav nav-pills mb-3 dp-day-tabs">
+        {% for tab in dayTabs %}
+            <li class="nav-item">
+                <a class="nav-link{{ tab.active ? ' active' }}" href="{{ tab.url }}"{{ tab.active ? ' aria-current="page"' }}>
+                    {{ tab.label }}{% if tab.today %} <span class="badge bg-light text-dark ms-1">aujourd’hui</span>{% endif %}
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+    {{ parent() }}
+{% endblock %}

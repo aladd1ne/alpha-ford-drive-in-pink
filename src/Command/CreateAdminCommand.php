@@ -14,9 +14,15 @@ use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-#[AsCommand(name: 'app:create-admin', description: 'Create an admin user, or a commercial with --commercial (interactive)')]
+#[AsCommand(name: 'app:create-admin', description: 'Create an admin user, or a staff account with --role (interactive)')]
 class CreateAdminCommand extends Command
 {
+    /** --role values. */
+    private const STAFF_ROLES = [
+        'reservations' => AdminUser::ROLE_RESERVATIONS,
+        'cashier' => AdminUser::ROLE_CASHIER,
+    ];
+
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly AdminUserRepository $admins,
@@ -27,7 +33,9 @@ class CreateAdminCommand extends Command
 
     protected function configure(): void
     {
-        $this->addOption('commercial', null, InputOption::VALUE_NONE, 'Create a commercial account (test drive validation only) instead of an admin');
+        $this
+            ->addOption('role', null, InputOption::VALUE_REQUIRED, sprintf('Create a staff account instead of an admin: %s', implode(' or ', array_keys(self::STAFF_ROLES))))
+            ->addOption('commercial', null, InputOption::VALUE_NONE, 'Same as --role=cashier');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -40,10 +48,15 @@ class CreateAdminCommand extends Command
             return Command::FAILURE;
         }
 
-        $commercial = (bool) $input->getOption('commercial');
-        $kind = $commercial ? 'commercial' : 'admin';
+        $role = $input->getOption('commercial') ? 'cashier' : $input->getOption('role');
+        if (null !== $role && !isset(self::STAFF_ROLES[$role])) {
+            $io->error(sprintf('Unknown role "%s": use %s.', $role, implode(' or ', array_keys(self::STAFF_ROLES))));
 
-        $io->title(sprintf('Create an %s user', $kind));
+            return Command::FAILURE;
+        }
+        $kind = $role ?? 'admin';
+
+        $io->title(sprintf('Create a %s user', $kind));
 
         $email = $io->askQuestion($this->emailQuestion());
 
@@ -65,7 +78,7 @@ class CreateAdminCommand extends Command
 
         $admin = new AdminUser();
         $admin->setEmail($email);
-        $admin->setRoles([$commercial ? AdminUser::ROLE_COMMERCIAL : AdminUser::ROLE_ADMIN]);
+        $admin->setRoles([null !== $role ? self::STAFF_ROLES[$role] : AdminUser::ROLE_ADMIN]);
         $admin->setPassword($this->passwordHasher->hashPassword($admin, $password));
 
         $this->em->persist($admin);

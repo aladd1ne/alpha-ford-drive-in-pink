@@ -10,22 +10,23 @@
             <div class="dp-admin-stat__value"><span data-fund="total">{{ fund.total|number_format(0, ',', ' ') }}</span> DT</div>
             <div class="dp-admin-stat__note">
                 <span data-fund="testDrives">{{ fund.testDrives }}</span>
-                <span data-fund-label="testDrives" data-one="test drive validé" data-many="test drives validés">{{ fund.testDrives > 1 ? 'test drives validés' : 'test drive validé' }}</span>
-                · 30 DT par essai
+                <span data-fund-label="testDrives" data-one="test drive encaissé" data-many="test drives encaissés">{{ fund.testDrives > 1 ? 'test drives encaissés' : 'test drive encaissé' }}</span>
             </div>
         </div>
         <div class="dp-admin-stat">
             <div class="dp-admin-stat__label">Aujourd’hui</div>
             <div class="dp-admin-stat__value">{{ toValidateToday }}</div>
-            <div class="dp-admin-stat__note">test drive{{ toValidateToday > 1 ? 's' }} à valider</div>
+            <div class="dp-admin-stat__note">test drive{{ toValidateToday > 1 ? 's' }} à encaisser</div>
         </div>
     </div>
 
-    <a href="{{ ea_url().setController('App\\Controller\\Admin\\TestDriveCrudController').setAction('index') }}" class="btn btn-primary mb-4">
-        Test drives du jour
-    </a>
+    {% if is_granted('ROLE_CASHIER') %}
+        <a href="{{ ea_url().setController('App\\Controller\\Admin\\TestDriveCrudController').setAction('index') }}" class="btn btn-primary mb-4">
+            Encaissement du jour
+        </a>
+    {% endif %}
 
-    {% if is_granted('ROLE_ADMIN') %}
+    {% if is_granted('ROLE_RESERVATIONS') %}
         <div class="dp-admin-stats">
             {% for experience in experiences %}
                 <div class="dp-admin-stat">
