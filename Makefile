@@ -11,11 +11,12 @@ APP_SERVICE_NAME := php
 XDEBUG_SERVICE_NAME := xdebug
 TEST_SERVICE_NAME := test
 PMA_SERVICE_NAME := phpmyadmin
+PROD_COMPOSE := bin/docker-compose -f docker-compose.prod.yml --env-file .env.prod.local
 
 include docker-compose.env
 -include .env.local
 
-.PHONY: default dcps dcupd dcupd dcstop dcdn dclogs dcshell dcxdbg dctest dccheck
+.PHONY: default dcps dcupd dcupd dcstop dcdn dclogs dcshell dcxdbg dctest dccheck prod php prod-logs prod-down
 
 default: dcps
 
@@ -70,5 +71,25 @@ dccheck:
 	bin/docker-compose --profile $(TEST_SERVICE_NAME) run --rm test composer check
 dcexec:
 	bin/docker-compose exec $(APP_SERVICE_NAME) bash
+# Production: rebuild images, (re)start the stack, install deps, migrate, warm cache.
+prod:
+	$(PROD_COMPOSE) up -d --build --remove-orphans
+	$(PROD_COMPOSE) exec -T $(APP_SERVICE_NAME) composer install --no-dev --optimize-autoloader --no-interaction
+	$(PROD_COMPOSE) exec -T $(APP_SERVICE_NAME) php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration
+	$(PROD_COMPOSE) exec -T $(APP_SERVICE_NAME) php bin/console cache:clear
+	$(PROD_COMPOSE) exec -T $(APP_SERVICE_NAME) php bin/console cache:warmup
+	$(PROD_COMPOSE) ps
+
+# Get a bash inside the running production php container.
+php:
+	$(PROD_COMPOSE) exec $(APP_SERVICE_NAME) bash
+
+# Follow production logs.
+prod-logs:
+	$(PROD_COMPOSE) logs --tail=100 -f
+
+# Stop production stack (keeps the database volume).
+prod-down:
+	$(PROD_COMPOSE) down --remove-orphans
 # Include the .d makefiles. The - at the front suppresses the errors of missing
 -include makefiles.d/*
