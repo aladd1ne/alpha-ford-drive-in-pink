@@ -269,13 +269,21 @@ final class TestDriveControllerTest extends WebTestCase
         self::assertCount(1, $this->contributions());
     }
 
-    public function testCashierCannotAddAWalkInTestDrive(): void
+    public function testCashierCanAddAWalkInTestDrive(): void
     {
         $this->loginAs(['ROLE_CASHIER']);
 
         $crawler = $this->client->request('GET', '/admin/test-drives');
         self::assertResponseIsSuccessful();
-        self::assertStringNotContainsString('Ajouter un test drive', $crawler->filter('body')->text());
+        self::assertStringContainsString('Ajouter un test drive', $crawler->filter('body')->text());
+
+        $this->client->request('GET', '/admin/test-drives/ajouter');
+        self::assertResponseIsSuccessful();
+    }
+
+    public function testReservationsManagerCannotAddAWalkInTestDrive(): void
+    {
+        $this->loginAs(['ROLE_RESERVATIONS']);
 
         $this->client->request('GET', '/admin/test-drives/ajouter');
         self::assertResponseStatusCodeSame(403);
