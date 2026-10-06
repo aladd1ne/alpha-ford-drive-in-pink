@@ -2,11 +2,13 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\FundContribution;
 use App\Entity\Reservation;
 use App\Enum\Experience;
 use App\Enum\ReservationStatus;
 use App\Enum\TestDriveStatus;
 use App\Enum\Vehicle;
+use App\Form\Admin\ManualTestDriveType;
 use App\Form\Admin\ReservationEditType;
 use App\Repository\ReservationRepository;
 use App\Service\Reservation\ReservationChangeException;
@@ -17,6 +19,7 @@ use App\Service\TestDrive\ReservationNotFoundException;
 use App\Service\TestDrive\TestDriveNotEligibleException;
 use App\Service\TestDrive\TestDriveValidator;
 use App\Service\TestDrive\ValidationOutcome;
+use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminRoute;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
@@ -46,10 +49,12 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 /**
  * Reservations team: every reservation (event days and "autres jours d'octobre"
- * requests), which they confirm, edit (contact, date, vehicle, slot) and archive.
+ * requests), which they confirm, edit (contact, date, vehicle, slot) and archive; they
+ * also add walk-in test drives by hand (addTestDrive()).
  * Archived reservations are hidden unless the status filter asks for them.
  *
  * The cashier (ROLE_CASHIER, which includes ROLE_RESERVATIONS_ACCESS) gets the same pages
@@ -71,6 +76,8 @@ class ReservationCrudController extends AbstractCrudController
     public const ARCHIVE_ACTION = 'archiveReservation';
     public const CONFIRM_CASH_IN_ACTION = 'confirmAndCashIn';
     public const CASH_IN_ACTION = 'cashInTestDrive';
+    public const ADD_ACTION = 'addTestDrive';
+    public const ADD_ROUTE = 'admin_reservation_add';
 
     public function __construct(
         private readonly UrlGeneratorInterface $urlGenerator,
@@ -81,6 +88,8 @@ class ReservationCrudController extends AbstractCrudController
         private readonly TestDriveValidator $validator,
         private readonly SlotSchedule $schedule,
         private readonly SolidarityFund $fund,
+        private readonly EntityManagerInterface $entityManager,
+        private readonly ValidatorInterface $entityValidator,
     ) {
     }
 
@@ -134,6 +143,10 @@ class ReservationCrudController extends AbstractCrudController
         return $actions
             ->add(Crud::PAGE_INDEX, Action::DETAIL)
             ->add(Crud::PAGE_INDEX, self::exportExcelAction())
+            ->add(Crud::PAGE_INDEX, Action::new(self::ADD_ACTION, 'Ajouter un test drive', 'fas fa-plus')
+                ->linkToUrl($urlGenerator->generate(self::ADD_ROUTE))
+                ->addCssClass('btn btn-primary')
+                ->createAsGlobalAction())
             ->add(Crud::PAGE_INDEX, $confirm)
             ->add(Crud::PAGE_INDEX, $confirmCashIn)
             ->add(Crud::PAGE_INDEX, $cashIn)
@@ -148,6 +161,7 @@ class ReservationCrudController extends AbstractCrudController
             ->setPermission(self::CASH_IN_ACTION, 'ROLE_CASHIER')
             ->setPermission(self::EDIT_ACTION, 'ROLE_RESERVATIONS')
             ->setPermission(self::ARCHIVE_ACTION, 'ROLE_RESERVATIONS')
+            ->setPermission(self::ADD_ACTION, 'ROLE_RESERVATIONS')
             ->update(Crud::PAGE_INDEX, Action::DETAIL, static fn (Action $action): Action => $action->setIcon('fas fa-eye')->setLabel(false)->setCssClass('btn btn-sm btn-outline-secondary')->setTemplatePath('admin/action/link_action.html.twig')->setHtmlAttributes(['title' => 'Voir le détail']))
             ->reorder(Crud::PAGE_INDEX, [...$order, Action::DETAIL])
             ->reorder(Crud::PAGE_DETAIL, $order)
@@ -290,6 +304,56 @@ class ReservationCrudController extends AbstractCrudController
             'form' => $form,
             'reservation' => $reservation,
             'backUrl' => $this->detailUrl($reservation),
+        ], new Response(status: $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK));
+    }
+
+    /**
+     * Walk-in test drive, added by hand for today (no slot). When "déjà effectué" is ticked,
+     * it is cashed in right away with the amount received, through TestDriveValidator.
+     * Reservations team and admins (not the cashier).
+     */
+    #[IsGranted('ROLE_RESERVATIONS')]
+    #[AdminRoute(path: '/ajouter', name: 'add', options: ['methods' => ['GET', 'POST']])]
+    public function addTestDrive(Request $request): Response
+    {
+        $today = $this->schedule->dayOf($this->clock->now());
+        $form = $this->createForm(ManualTestDriveType::class, ['completed' => true, 'amount' => FundContribution::CLIENT_SHARE]);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $data = $form->getData();
+            $user = $this->getUser()?->getUserIdentifier() ?? 'inconnu';
+            $reservation = ManualTestDriveType::apply(
+                Reservation::createManual($data['experience'], $today, $user, $this->clock->now()),
+                $data,
+            );
+
+            $violations = $this->entityValidator->validate($reservation);
+            foreach ($violations as $violation) {
+                $path = $violation->getPropertyPath();
+                $field = \in_array($path, ManualTestDriveType::ENTITY_FIELDS, true) ? $form->get($path) : $form;
+                $field->addError(new FormError((string) $violation->getMessage()));
+            }
+
+            if (0 === \count($violations)) {
+                $this->entityManager->persist($reservation);
+                $this->entityManager->flush();
+
+                $amount = (int) $data['amount'];
+                if ($data['completed'] && ValidationOutcome::Validated === $this->validator->validate((int) $reservation->getId(), $user, clientAmount: $amount)) {
+                    $this->addFlash('cagnotte', ['amount' => $amount + FundContribution::ALPHA_FORD_SHARE, 'total' => $this->fund->total()]);
+                } else {
+                    $this->addFlash('success', sprintf('Test drive de %s ajouté.', $reservation->getFullName()));
+                }
+
+                return $this->redirect($this->indexUrl());
+            }
+        }
+
+        return $this->render('admin/test_drive/add.html.twig', [
+            'form' => $form,
+            'today' => $today,
+            'backUrl' => $this->indexUrl(),
         ], new Response(status: $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK));
     }
 
