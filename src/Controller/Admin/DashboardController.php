@@ -67,7 +67,7 @@ class DashboardController extends AbstractDashboardController
         yield MenuItem::linkTo(TestDriveCrudController::class, 'Test drives à encaisser', 'fas fa-cash-register')
             ->setPermission('ROLE_CASHIER');
         yield MenuItem::linkToRoute('Ajouter un test drive', 'fas fa-plus', TestDriveCrudController::ADD_ROUTE)
-            ->setPermission('ROLE_ADMIN');
+            ->setPermission('ROLE_CASHIER');
         yield MenuItem::linkTo(FundContributionCrudController::class, 'Historique de la cagnotte', 'fas fa-coins')
             ->setPermission('ROLE_CASHIER');
         yield MenuItem::section('Utilisateurs')->setPermission('ROLE_ADMIN');

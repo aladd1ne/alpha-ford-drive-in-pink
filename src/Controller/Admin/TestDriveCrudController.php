@@ -124,7 +124,7 @@ class TestDriveCrudController extends AbstractCrudController
                 ->addCssClass('btn btn-primary')
                 ->createAsGlobalAction())
             ->setPermission(self::VALIDATE_ACTION, 'ROLE_CASHIER')
-            ->setPermission(self::ADD_ACTION, 'ROLE_ADMIN')
+            ->setPermission(self::ADD_ACTION, 'ROLE_CASHIER')
             ->disable(Action::NEW, Action::EDIT, Action::DELETE, Action::BATCH_DELETE, Action::DETAIL);
     }
 
@@ -254,9 +254,9 @@ class TestDriveCrudController extends AbstractCrudController
     /**
      * Walk-in test drive, added by hand for today (no slot). When "déjà effectué" is ticked,
      * it is cashed in right away with the amount received, through TestDriveValidator.
-     * Admins only.
+     * Cashiers and admins.
      */
-    #[IsGranted('ROLE_ADMIN')]
+    #[IsGranted('ROLE_CASHIER')]
     #[AdminRoute(path: '/ajouter', name: 'add', options: ['methods' => ['GET', 'POST']])]
     public function addTestDrive(Request $request): Response
     {
