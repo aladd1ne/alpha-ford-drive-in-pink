@@ -1,14 +1,21 @@
-{# "Encaisser": amount received + POST with a CSRF token (EasyAdmin's form actions have none). #}
+{# "Encaisser": opens a modal asking for the amount received (prefilled with the usual client
+   share, the client may give more), then POSTs it with a CSRF token (EasyAdmin's form
+   actions have none). #}
 {# @var action \EasyCorp\Bundle\EasyAdminBundle\Dto\ActionDto #}
 {# @var entity \EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto #}
-<form action="{{ action.linkUrl }}" method="post" class="d-inline-flex align-items-center gap-1 dp-validate-test-drive"
-      onsubmit="return confirm('Encaisser ' + this.amount.value + ' DT pour {{ entity.instance.fullName|e('js') }} ? Le test drive sera validé et la cagnotte créditée.');">
+{% set dialog_id = 'dp-modal-' ~ action.name ~ '-' ~ entity.instance.id %}
+<form action="{{ action.linkUrl }}" method="post" class="d-inline dp-validate-test-drive">
     <input type="hidden" name="_token" value="{{ csrf_token('validate-test-drive-' ~ entity.instance.id) }}">
     <input type="hidden" name="_return" value="{{ app.request.requestUri }}">
-    <input type="number" name="amount" value="10" min="0" max="10000" step="1" required
-           class="form-control form-control-sm" style="width: 5.5rem" aria-label="Montant reçu (DT)" title="Montant reçu (DT)">
-    <span class="small text-muted">DT</span>
-    <button type="submit" class="btn btn-sm btn-primary">
+    <button type="button" class="btn btn-sm btn-primary" data-modal-open="{{ dialog_id }}">
         <i class="fas fa-cash-register"></i> <span class="action-label">{{ action.label|trans }}</span>
     </button>
+    {{ include('admin/action/_modal.html.twig', {
+        id: dialog_id,
+        title: 'Encaisser le test drive de ' ~ entity.instance.fullName,
+        message: 'Le test drive sera validé et la cagnotte créditée.',
+        amount: true,
+        submit_label: 'Encaisser',
+        submit_icon: 'fas fa-cash-register',
+    }) }}
 </form>

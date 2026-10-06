@@ -1,0 +1,7 @@
+{# Row link action rendered with its own css class only (EasyAdmin's default template adds
+   its "btn-secondary" variant), so it matches the POST row actions next to it. #}
+{# @var action \EasyCorp\Bundle\EasyAdminBundle\Dto\ActionDto #}
+<a href="{{ action.linkUrl }}" class="{{ action.cssClass|default('btn btn-sm btn-outline-secondary') }}"
+   {% for name, value in action.htmlAttributes %}{{ name }}="{{ value }}" {% endfor %}{% if not action.label %}aria-label="{{ action.htmlAttributes.title|default('') }}"{% endif %}>
+    {% if action.icon %}<i class="{{ action.icon }}"></i>{% endif %}{% if action.label %} <span class="action-label">{{ action.label|trans }}</span>{% endif %}
+</a>

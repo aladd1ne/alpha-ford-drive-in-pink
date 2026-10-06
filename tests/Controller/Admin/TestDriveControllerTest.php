@@ -46,7 +46,7 @@ final class TestDriveControllerTest extends WebTestCase
             self::assertStringContainsString($expected, $row);
         }
         self::assertSelectorTextContains('table.datagrid', 'Encaisser');
-        self::assertSame('10', $crawler->filter('form.dp-validate-test-drive input[name="amount"]')->attr('value'));
+        self::assertSame('30', $crawler->filter('form.dp-validate-test-drive input[name="amount"]')->attr('value'), '10 DT client + 20 DT Alpha Ford.');
         self::assertCount(1, $crawler->filter(sprintf('form[action$="/admin/test-drives/%d/validate"]', $today->getId())));
     }
 
@@ -100,7 +100,7 @@ final class TestDriveControllerTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSelectorTextContains('h1', 'Encaissement du 09/10/2026');
         self::assertSelectorTextContains('table.datagrid', 'Futur Client');
-        self::assertCount(0, $crawler->filter('form.dp-validate-test-drive'), 'Not before the day.');
+        self::assertCount(1, $crawler->filter('form.dp-validate-test-drive'), 'Cashiers may cash in before the day.');
     }
 
     public function testAdminCashesInAFutureDayFromItsTab(): void
@@ -109,7 +109,7 @@ final class TestDriveControllerTest extends WebTestCase
         $this->loginAs(['ROLE_ADMIN']);
 
         $crawler = $this->client->request('GET', '/admin/test-drives?day=2026-10-09');
-        $this->client->submit($crawler->filter('form.dp-validate-test-drive')->form(['amount' => '15']));
+        $this->client->submit($crawler->filter('form.dp-validate-test-drive')->form(['amount' => '35']));
 
         self::assertResponseRedirects('/admin/test-drives?day=2026-10-09');
         $toast = $this->client->followRedirect()->filter('template[data-toast]');
@@ -129,7 +129,7 @@ final class TestDriveControllerTest extends WebTestCase
         $this->loginAs(['ROLE_CASHIER']);
         $token = $this->tokenFor($reservation);
 
-        foreach (['', '-5', 'abc', '10001'] as $amount) {
+        foreach (['', '-5', 'abc', '19', '10001'] as $amount) {
             $this->client->request('POST', sprintf('/admin/test-drives/%d/validate', $reservation->getId()), ['_token' => $token, 'amount' => $amount]);
             self::assertResponseRedirects('/admin/test-drives');
             $this->client->followRedirect();
@@ -146,7 +146,7 @@ final class TestDriveControllerTest extends WebTestCase
 
         $this->client->request('GET', '/admin/test-drives');
         self::assertResponseStatusCodeSame(403);
-        $this->client->request('POST', sprintf('/admin/test-drives/%d/validate', $reservation->getId()), ['_token' => 'x', 'amount' => '10']);
+        $this->client->request('POST', sprintf('/admin/test-drives/%d/validate', $reservation->getId()), ['_token' => 'x', 'amount' => '30']);
         self::assertResponseStatusCodeSame(403);
         self::assertCount(0, $this->contributions());
     }
@@ -168,7 +168,8 @@ final class TestDriveControllerTest extends WebTestCase
             self::assertStringContainsString($expected, $text);
         }
 
-        self::assertCount(1, $crawler->filter('form.dp-row-action--confirmReservation'));
+        // Admins may cash in any day: "Valider" takes the amount received.
+        self::assertCount(1, $crawler->filter('form.dp-row-action--confirmAndCashIn input[name="amount"]'));
     }
 
     public function testReturnUrlOutsideTheBackOfficeIsIgnored(): void
@@ -180,7 +181,7 @@ final class TestDriveControllerTest extends WebTestCase
         $this->client->request('POST', sprintf('/admin/test-drives/%d/validate', $reservation->getId()), [
             '_token' => $token,
             '_return' => 'https://evil.example/admin/',
-            'amount' => '10',
+            'amount' => '30',
         ]);
 
         self::assertResponseRedirects('/admin/test-drives');
@@ -250,7 +251,7 @@ final class TestDriveControllerTest extends WebTestCase
         self::assertCount(0, $this->contributions());
     }
 
-    public function testCommercialCannotValidateAFutureTestDrive(): void
+    public function testCashierValidatesATestDriveMovedToALaterDay(): void
     {
         $reservation = $this->booking('2026-10-01', '09:00');
         $this->loginAs(['ROLE_CASHIER']);
@@ -264,24 +265,25 @@ final class TestDriveControllerTest extends WebTestCase
         $this->postValidate($reservation->getId(), $token);
         $this->client->followRedirect();
 
-        self::assertSelectorTextContains('.alert-danger', 'date ultérieure');
-        self::assertCount(0, $this->contributions());
+        self::assertSelectorNotExists('.alert-danger');
+        self::assertCount(1, $this->contributions());
     }
 
-    public function testCommercialCannotOpenTheFullReservationList(): void
+    public function testCashierCannotAddAWalkInTestDrive(): void
     {
         $this->loginAs(['ROLE_CASHIER']);
 
-        $this->client->request('GET', '/admin');
+        $crawler = $this->client->request('GET', '/admin/test-drives');
         self::assertResponseIsSuccessful();
+        self::assertStringNotContainsString('Ajouter un test drive', $crawler->filter('body')->text());
 
-        $this->client->request('GET', '/admin/reservation');
+        $this->client->request('GET', '/admin/test-drives/ajouter');
         self::assertResponseStatusCodeSame(403);
     }
 
-    public function testCommercialAddsAWalkInTestDriveAlreadyDriven(): void
+    public function testAdminAddsAWalkInTestDriveAlreadyDriven(): void
     {
-        $this->loginAs(['ROLE_CASHIER']);
+        $this->loginAs(['ROLE_ADMIN']);
 
         $this->client->request('GET', '/admin/test-drives/ajouter');
         self::assertResponseIsSuccessful();
@@ -310,7 +312,7 @@ final class TestDriveControllerTest extends WebTestCase
 
     public function testWalkInLeftToValidateCreditsNothingYet(): void
     {
-        $this->loginAs(['ROLE_CASHIER']);
+        $this->loginAs(['ROLE_ADMIN']);
         $crawler = $this->client->request('GET', '/admin/test-drives/ajouter');
         $form = $crawler->selectButton('Ajouter')->form([
             'manual_test_drive[fullName]' => 'Walk In Client',
@@ -331,7 +333,7 @@ final class TestDriveControllerTest extends WebTestCase
 
     public function testWalkInVehicleMustMatchTheExperience(): void
     {
-        $this->loginAs(['ROLE_CASHIER']);
+        $this->loginAs(['ROLE_ADMIN']);
         $this->client->request('GET', '/admin/test-drives/ajouter');
 
         $this->client->submitForm('Ajouter', [
@@ -376,7 +378,7 @@ final class TestDriveControllerTest extends WebTestCase
 
     private function postValidate(int $reservationId, string $token): Crawler
     {
-        return $this->client->request('POST', sprintf('/admin/test-drives/%d/validate', $reservationId), ['_token' => $token, 'amount' => '10']);
+        return $this->client->request('POST', sprintf('/admin/test-drives/%d/validate', $reservationId), ['_token' => $token, 'amount' => '30']);
     }
 
     private function reload(Reservation $reservation): Reservation

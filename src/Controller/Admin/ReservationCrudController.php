@@ -11,6 +11,12 @@ use App\Form\Admin\ReservationEditType;
 use App\Repository\ReservationRepository;
 use App\Service\Reservation\ReservationChangeException;
 use App\Service\Reservation\ReservationManager;
+use App\Service\Reservation\SlotSchedule;
+use App\Service\SolidarityFund;
+use App\Service\TestDrive\ReservationNotFoundException;
+use App\Service\TestDrive\TestDriveNotEligibleException;
+use App\Service\TestDrive\TestDriveValidator;
+use App\Service\TestDrive\ValidationOutcome;
 use Doctrine\ORM\QueryBuilder;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminRoute;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
@@ -46,9 +52,15 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  * requests), which they confirm, edit (contact, date, vehicle, slot) and archive.
  * Archived reservations are hidden unless the status filter asks for them.
  *
+ * The cashier (ROLE_CASHIER, which includes ROLE_RESERVATIONS_ACCESS) gets the same pages
+ * but can only view and validate (no Modifier / Archiver); on a
+ * reservation whose test drive can be cashed in (any day), "Valider" also takes the total
+ * received (validated test drive + cagnotte credit, see TestDriveValidator), and a confirmed one
+ * not cashed in yet has the "Encaisser" action of the cashier space.
+ *
  * @extends AbstractCrudController<Reservation>
  */
-#[IsGranted('ROLE_RESERVATIONS')]
+#[IsGranted('ROLE_RESERVATIONS_ACCESS')]
 class ReservationCrudController extends AbstractCrudController
 {
     use ExportsReservationsToExcel;
@@ -57,6 +69,8 @@ class ReservationCrudController extends AbstractCrudController
     public const CONFIRM_ACTION = 'confirmReservation';
     public const EDIT_ACTION = 'editReservation';
     public const ARCHIVE_ACTION = 'archiveReservation';
+    public const CONFIRM_CASH_IN_ACTION = 'confirmAndCashIn';
+    public const CASH_IN_ACTION = 'cashInTestDrive';
 
     public function __construct(
         private readonly UrlGeneratorInterface $urlGenerator,
@@ -64,6 +78,9 @@ class ReservationCrudController extends AbstractCrudController
         private readonly ClockInterface $clock,
         private readonly ReservationRepository $reservations,
         private readonly ReservationManager $manager,
+        private readonly TestDriveValidator $validator,
+        private readonly SlotSchedule $schedule,
+        private readonly SolidarityFund $fund,
     ) {
     }
 
@@ -87,25 +104,53 @@ class ReservationCrudController extends AbstractCrudController
 
     public function configureActions(Actions $actions): Actions
     {
+        // A reservation the current user may cash in (cashier or admin, any day).
+        $cashier = $this->isGranted('ROLE_CASHIER');
+        $today = $this->schedule->dayOf($this->clock->now());
+        $cashable = static fn (Reservation $reservation): bool => $cashier && $reservation->canValidateTestDrive($today, true);
+
         $confirm = $this->rowAction(self::CONFIRM_ACTION, 'Valider', 'fas fa-check', 'btn btn-sm btn-primary', 'reservation-confirm-', 'Valider la réservation de %name% ?')
-            ->displayIf(static fn (Reservation $reservation): bool => ReservationStatus::Pending === $reservation->getStatus());
-        $archive = $this->rowAction(self::ARCHIVE_ACTION, 'Archiver', 'fas fa-box-archive', 'btn btn-sm btn-outline-secondary', 'reservation-archive-', 'Archiver la réservation de %name% ? Son créneau sera libéré.')
+            ->displayIf(static fn (Reservation $reservation): bool => ReservationStatus::Pending === $reservation->getStatus() && !$cashable($reservation));
+        $confirmCashIn = $this->rowAction(self::CONFIRM_CASH_IN_ACTION, 'Valider', 'fas fa-check', 'btn btn-sm btn-primary', 'reservation-confirm-', '')
+            ->setTemplatePath('admin/action/confirm_cash_in.html.twig')
+            ->displayIf(static fn (Reservation $reservation): bool => ReservationStatus::Pending === $reservation->getStatus() && $cashable($reservation));
+        $archive = $this->rowAction(self::ARCHIVE_ACTION, 'Archiver', 'fas fa-box-archive', 'btn btn-sm btn-outline-danger', 'reservation-archive-', 'Archiver la réservation de %name% ? Son créneau sera libéré.')
             ->displayIf(static fn (Reservation $reservation): bool => ReservationStatus::Archived !== $reservation->getStatus());
         $urlGenerator = $this->urlGenerator;
         $edit = Action::new(self::EDIT_ACTION, 'Modifier', 'fas fa-pen')
+            ->setCssClass('btn btn-sm btn-outline-secondary')
+            ->setTemplatePath('admin/action/link_action.html.twig')
             ->linkToUrl(static fn (Reservation $reservation): string => $urlGenerator->generate('admin_reservation_modify', ['entityId' => $reservation->getId()]))
             ->displayIf(static fn (Reservation $reservation): bool => $reservation->getStatus()->isActive());
+        $cashIn = Action::new(self::CASH_IN_ACTION, 'Encaisser', 'fas fa-cash-register')
+            ->linkToUrl(static fn (Reservation $reservation): string => $urlGenerator->generate(TestDriveCrudController::VALIDATE_ROUTE, ['entityId' => $reservation->getId()]))
+            ->setTemplatePath('admin/action/cash_in.html.twig')
+            ->displayIf(static fn (Reservation $reservation): bool => ReservationStatus::Pending !== $reservation->getStatus() && $cashable($reservation));
+
+        // Same order on every row: the main action (Valider / Encaisser), then Modifier,
+        // Archiver and the detail link; only one of the first three is shown at a time.
+        $order = [self::CONFIRM_ACTION, self::CONFIRM_CASH_IN_ACTION, self::CASH_IN_ACTION, self::EDIT_ACTION, self::ARCHIVE_ACTION];
 
         return $actions
             ->add(Crud::PAGE_INDEX, Action::DETAIL)
             ->add(Crud::PAGE_INDEX, self::exportExcelAction())
             ->add(Crud::PAGE_INDEX, $confirm)
+            ->add(Crud::PAGE_INDEX, $confirmCashIn)
+            ->add(Crud::PAGE_INDEX, $cashIn)
             ->add(Crud::PAGE_INDEX, $edit)
             ->add(Crud::PAGE_INDEX, $archive)
             ->add(Crud::PAGE_DETAIL, $confirm)
+            ->add(Crud::PAGE_DETAIL, $confirmCashIn)
+            ->add(Crud::PAGE_DETAIL, $cashIn)
             ->add(Crud::PAGE_DETAIL, $edit)
             ->add(Crud::PAGE_DETAIL, $archive)
-            ->update(Crud::PAGE_INDEX, Action::DETAIL, static fn (Action $action): Action => $action->setIcon('fas fa-eye')->setLabel(false)->setHtmlAttributes(['title' => 'Voir le détail']))
+            ->setPermission(self::CONFIRM_CASH_IN_ACTION, 'ROLE_CASHIER')
+            ->setPermission(self::CASH_IN_ACTION, 'ROLE_CASHIER')
+            ->setPermission(self::EDIT_ACTION, 'ROLE_RESERVATIONS')
+            ->setPermission(self::ARCHIVE_ACTION, 'ROLE_RESERVATIONS')
+            ->update(Crud::PAGE_INDEX, Action::DETAIL, static fn (Action $action): Action => $action->setIcon('fas fa-eye')->setLabel(false)->setCssClass('btn btn-sm btn-outline-secondary')->setTemplatePath('admin/action/link_action.html.twig')->setHtmlAttributes(['title' => 'Voir le détail']))
+            ->reorder(Crud::PAGE_INDEX, [...$order, Action::DETAIL])
+            ->reorder(Crud::PAGE_DETAIL, $order)
             ->disable(Action::NEW, Action::EDIT, Action::DELETE);
     }
 
@@ -159,16 +204,52 @@ class ReservationCrudController extends AbstractCrudController
         return $qb;
     }
 
+    /**
+     * Confirms the booking. With an amount (cashier only), the test drive is cashed in
+     * instead: the reservation is confirmed and the cagnotte credited in one go.
+     */
     #[AdminRoute(path: '/{entityId}/confirmer', name: 'confirm', options: ['methods' => ['POST'], 'requirements' => ['entityId' => '\d+']])]
     public function confirmReservation(Request $request): RedirectResponse
     {
-        return $this->postAction($request, 'reservation-confirm-', function (Reservation $reservation): void {
-            $this->manager->confirm($reservation);
-            $this->addFlash('success', sprintf('Réservation de %s validée.', $reservation->getFullName()));
+        $amount = trim((string) $request->request->get('amount'));
+
+        if ('' === $amount) {
+            return $this->postAction($request, 'reservation-confirm-', function (Reservation $reservation): void {
+                $this->manager->confirm($reservation);
+                $this->addFlash('success', sprintf('Réservation de %s validée.', $reservation->getFullName()));
+            });
+        }
+
+        $this->denyAccessUnlessGranted('ROLE_CASHIER');
+
+        return $this->postAction($request, 'reservation-confirm-', function (Reservation $reservation) use ($amount): void {
+            $clientAmount = TestDriveCrudController::clientAmountOf($amount)
+                ?? throw new ReservationChangeException(TestDriveCrudController::invalidAmountMessage());
+
+            try {
+                $outcome = $this->validator->validate(
+                    (int) $reservation->getId(),
+                    $this->getUser()?->getUserIdentifier() ?? 'inconnu',
+                    true,
+                    $clientAmount,
+                );
+            } catch (ReservationNotFoundException $e) {
+                throw $this->createNotFoundException($e->getMessage(), $e);
+            } catch (TestDriveNotEligibleException $e) {
+                throw new ReservationChangeException($e->getMessage(), null, $e);
+            }
+
+            if (ValidationOutcome::Validated === $outcome) {
+                // Shown as a toast with the new total (templates/admin/flash_messages.html.twig).
+                $this->addFlash('cagnotte', ['amount' => (int) $amount, 'total' => $this->fund->total()]);
+            } else {
+                $this->addFlash('info', 'Ce test drive était déjà encaissé : aucun montant ajouté.');
+            }
         });
     }
 
     #[AdminRoute(path: '/{entityId}/archiver', name: 'archive', options: ['methods' => ['POST'], 'requirements' => ['entityId' => '\d+']])]
+    #[IsGranted('ROLE_RESERVATIONS')]
     public function archiveReservation(Request $request): RedirectResponse
     {
         return $this->postAction($request, 'reservation-archive-', function (Reservation $reservation): void {
@@ -178,6 +259,7 @@ class ReservationCrudController extends AbstractCrudController
     }
 
     #[AdminRoute(path: '/{entityId}/modifier', name: 'modify', options: ['methods' => ['GET', 'POST'], 'requirements' => ['entityId' => '\d+']])]
+    #[IsGranted('ROLE_RESERVATIONS')]
     public function editReservation(Request $request): Response
     {
         $reservation = $this->findReservation($request);

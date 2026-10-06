@@ -1,0 +1,22 @@
+{# Cashier's "Valider" on a reservation list: opens a modal asking for the amount received
+   (prefilled with the usual client share, the client may give more). With an amount the
+   test drive is cashed in too (the cagnotte gets it + Alpha Ford's share); emptied, only
+   the booking is confirmed. #}
+{# @var action \EasyCorp\Bundle\EasyAdminBundle\Dto\ActionDto #}
+{# @var entity \EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto #}
+{% set dialog_id = 'dp-modal-' ~ action.name ~ '-' ~ entity.instance.id %}
+<form action="{{ action.linkUrl }}" method="post" class="d-inline dp-row-action dp-row-action--{{ action.name }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('reservation-confirm-' ~ entity.instance.id) }}">
+    <input type="hidden" name="_return" value="{{ app.request.requestUri }}">
+    <button type="button" class="{{ action.cssClass|default('btn btn-sm btn-primary') }}" data-modal-open="{{ dialog_id }}">
+        {% if action.icon %}<i class="{{ action.icon }}"></i>{% endif %} <span class="action-label">{{ action.label|trans }}</span>
+    </button>
+    {{ include('admin/action/_modal.html.twig', {
+        id: dialog_id,
+        title: 'Valider la réservation de ' ~ entity.instance.fullName,
+        amount: true,
+        amount_required: false,
+        submit_label: 'Valider',
+        submit_icon: 'fas fa-check',
+    }) }}
+</form>
