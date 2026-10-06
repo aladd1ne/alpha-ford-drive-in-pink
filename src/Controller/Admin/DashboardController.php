@@ -63,10 +63,10 @@ class DashboardController extends AbstractDashboardController
             ->setPermission('ROLE_RESERVATIONS_ACCESS');
         yield MenuItem::linkToUrl('Demandes d’octobre', 'fas fa-calendar-plus', $this->octoberRequestsUrl())
             ->setPermission('ROLE_RESERVATIONS_ACCESS');
+        yield MenuItem::linkToRoute('Ajouter un test drive', 'fas fa-plus', ReservationCrudController::ADD_ROUTE)
+            ->setPermission('ROLE_RESERVATIONS');
         yield MenuItem::section('Encaissement')->setPermission('ROLE_CASHIER');
         yield MenuItem::linkTo(TestDriveCrudController::class, 'Test drives à encaisser', 'fas fa-cash-register')
-            ->setPermission('ROLE_CASHIER');
-        yield MenuItem::linkToRoute('Ajouter un test drive', 'fas fa-plus', TestDriveCrudController::ADD_ROUTE)
             ->setPermission('ROLE_CASHIER');
         yield MenuItem::linkTo(FundContributionCrudController::class, 'Historique de la cagnotte', 'fas fa-coins')
             ->setPermission('ROLE_CASHIER');

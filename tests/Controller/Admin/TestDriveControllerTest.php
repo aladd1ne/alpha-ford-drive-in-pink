@@ -269,23 +269,27 @@ final class TestDriveControllerTest extends WebTestCase
         self::assertCount(1, $this->contributions());
     }
 
-    public function testCashierCanAddAWalkInTestDrive(): void
+    public function testReservationsManagerCanAddAWalkInTestDrive(): void
+    {
+        $this->loginAs(['ROLE_RESERVATIONS']);
+
+        $crawler = $this->client->request('GET', '/admin/reservation');
+        self::assertResponseIsSuccessful();
+        self::assertStringContainsString('Ajouter un test drive', $crawler->filter('body')->text());
+
+        $this->client->request('GET', '/admin/reservation/ajouter');
+        self::assertResponseIsSuccessful();
+    }
+
+    public function testCashierCannotAddAWalkInTestDrive(): void
     {
         $this->loginAs(['ROLE_CASHIER']);
 
         $crawler = $this->client->request('GET', '/admin/test-drives');
         self::assertResponseIsSuccessful();
-        self::assertStringContainsString('Ajouter un test drive', $crawler->filter('body')->text());
+        self::assertStringNotContainsString('Ajouter un test drive', $crawler->filter('body')->text());
 
-        $this->client->request('GET', '/admin/test-drives/ajouter');
-        self::assertResponseIsSuccessful();
-    }
-
-    public function testReservationsManagerCannotAddAWalkInTestDrive(): void
-    {
-        $this->loginAs(['ROLE_RESERVATIONS']);
-
-        $this->client->request('GET', '/admin/test-drives/ajouter');
+        $this->client->request('GET', '/admin/reservation/ajouter');
         self::assertResponseStatusCodeSame(403);
     }
 
@@ -293,7 +297,7 @@ final class TestDriveControllerTest extends WebTestCase
     {
         $this->loginAs(['ROLE_ADMIN']);
 
-        $this->client->request('GET', '/admin/test-drives/ajouter');
+        $this->client->request('GET', '/admin/reservation/ajouter');
         self::assertResponseIsSuccessful();
         $this->client->submitForm('Ajouter', [
             'manual_test_drive[fullName]' => 'Walk In Client',
@@ -321,7 +325,7 @@ final class TestDriveControllerTest extends WebTestCase
     public function testWalkInLeftToValidateCreditsNothingYet(): void
     {
         $this->loginAs(['ROLE_ADMIN']);
-        $crawler = $this->client->request('GET', '/admin/test-drives/ajouter');
+        $crawler = $this->client->request('GET', '/admin/reservation/ajouter');
         $form = $crawler->selectButton('Ajouter')->form([
             'manual_test_drive[fullName]' => 'Walk In Client',
             'manual_test_drive[phone]' => '+216 22 333 444',
@@ -334,15 +338,15 @@ final class TestDriveControllerTest extends WebTestCase
         $this->client->submit($form);
 
         self::assertResponseRedirects();
-        $crawler = $this->client->followRedirect();
         self::assertCount(0, $this->contributions());
-        self::assertCount(1, $crawler->filter('form.dp-validate-test-drive'), 'It can be validated from the list.');
+        $crawler = $this->client->request('GET', '/admin/test-drives');
+        self::assertCount(1, $crawler->filter('form.dp-validate-test-drive'), 'It can be cashed in from the cashier list.');
     }
 
     public function testWalkInVehicleMustMatchTheExperience(): void
     {
         $this->loginAs(['ROLE_ADMIN']);
-        $this->client->request('GET', '/admin/test-drives/ajouter');
+        $this->client->request('GET', '/admin/reservation/ajouter');
 
         $this->client->submitForm('Ajouter', [
             'manual_test_drive[fullName]' => 'Walk In Client',
