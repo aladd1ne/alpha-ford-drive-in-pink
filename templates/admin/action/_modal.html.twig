@@ -1,0 +1,31 @@
+{# Custom confirmation modal of a row action form (replaces the browser's confirm()),
+   opened by a [data-modal-open] button of the same form, see public/js/admin-modal.js.
+     id               dialog id
+     title            modal title
+     message          optional text under the title
+     amount           true: adds the "total received" field, Alpha Ford's share included
+                      (prefilled with FundContribution::TEST_DRIVE_AMOUNT each time it opens,
+                      the client may give more) and its live client / Alpha Ford split
+     amount_required  false: the amount may be emptied (only the booking is confirmed then)
+     submit_label / submit_icon #}
+{% set default_total = constant('App\\Entity\\FundContribution::TEST_DRIVE_AMOUNT') %}
+{% set alpha_ford_share = constant('App\\Entity\\FundContribution::ALPHA_FORD_SHARE') %}
+{% set amount = amount|default(false) %}
+{% set amount_required = amount_required|default(true) %}
+<dialog id="{{ id }}" class="dp-modal-dialog" aria-labelledby="{{ id }}-title" data-alpha-ford-share="{{ alpha_ford_share }}">
+    <p class="dp-modal-dialog__title" id="{{ id }}-title">{{ title }}</p>
+    {% if message|default('') %}<p class="dp-modal-dialog__message">{{ message }}</p>{% endif %}
+    {% if amount %}
+        <label class="form-label" for="{{ id }}-amount">Montant total (DT){% if not amount_required %} <span class="text-muted">— facultatif</span>{% endif %}</label>
+        <div class="input-group">
+            <input type="number" id="{{ id }}-amount" name="amount" value="{{ default_total }}" data-default="{{ default_total }}"
+                   min="{{ alpha_ford_share }}" max="10000" step="1" class="form-control"{% if amount_required %} required{% endif %}>
+            <span class="input-group-text">DT</span>
+        </div>
+        <p class="dp-modal-dialog__help" data-modal-total>Cagnotte créditée de {{ default_total }} DT ({{ default_total - alpha_ford_share }} DT client + {{ alpha_ford_share }} DT Alpha Ford).</p>
+    {% endif %}
+    <div class="dp-modal-dialog__actions">
+        <button type="button" class="btn btn-secondary" data-modal-close>Annuler</button>
+        <button type="submit" class="btn btn-primary">{% if submit_icon|default('') %}<i class="{{ submit_icon }}"></i> {% endif %}{{ submit_label|default('Confirmer') }}</button>
+    </div>
+</dialog>

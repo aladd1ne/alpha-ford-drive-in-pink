@@ -76,13 +76,13 @@ final class ReservationExportTest extends WebTestCase
         self::assertSame('Sarra Ben Ali', $rows[1][4]);
     }
 
-    public function testCommercialCannotExportTheFullReservationList(): void
+    public function testCashierCanExportTheFullReservationList(): void
     {
         $this->loginAs(['ROLE_CASHIER']);
 
         $this->client->request('GET', '/admin/reservation/export');
 
-        self::assertResponseStatusCodeSame(403);
+        self::assertResponseIsSuccessful();
     }
 
     /**

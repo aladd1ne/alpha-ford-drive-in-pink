@@ -5,11 +5,14 @@ security:
 
     # ROLE_COMMERCIAL is the back-office access shared by the staff roles:
     # - ROLE_RESERVATIONS manages the reservations (confirm, edit, archive, October requests);
-    # - ROLE_CASHIER cashes in the event-day test drives and the cagnotte amounts.
+    # - ROLE_CASHIER cashes in the event-day test drives and the cagnotte amounts; it also
+    #   has the reservations pages (ROLE_RESERVATIONS_ACCESS: view and validate, where
+    #   validating can cash the test drive in as well) but cannot edit nor archive them.
     # An admin can do everything both can.
     role_hierarchy:
-        ROLE_RESERVATIONS: [ROLE_COMMERCIAL]
-        ROLE_CASHIER: [ROLE_COMMERCIAL]
+        ROLE_RESERVATIONS_ACCESS: [ROLE_COMMERCIAL]
+        ROLE_RESERVATIONS: [ROLE_RESERVATIONS_ACCESS]
+        ROLE_CASHIER: [ROLE_RESERVATIONS_ACCESS]
         ROLE_ADMIN: [ROLE_RESERVATIONS, ROLE_CASHIER]
 
     providers:

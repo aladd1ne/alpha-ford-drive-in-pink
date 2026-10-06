@@ -58,19 +58,17 @@ class DashboardController extends AbstractDashboardController
     public function configureMenuItems(): iterable
     {
         yield MenuItem::linkToDashboard('Tableau de bord', 'fas fa-chart-bar');
-        yield MenuItem::section('Réservations')->setPermission('ROLE_RESERVATIONS');
+        yield MenuItem::section('Réservations')->setPermission('ROLE_RESERVATIONS_ACCESS');
         yield MenuItem::linkTo(ReservationCrudController::class, 'Toutes les réservations', 'fas fa-calendar-check')
-            ->setPermission('ROLE_RESERVATIONS');
+            ->setPermission('ROLE_RESERVATIONS_ACCESS');
         yield MenuItem::linkToUrl('Demandes d’octobre', 'fas fa-calendar-plus', $this->octoberRequestsUrl())
-            ->setPermission('ROLE_RESERVATIONS');
+            ->setPermission('ROLE_RESERVATIONS_ACCESS');
         yield MenuItem::section('Encaissement')->setPermission('ROLE_CASHIER');
         yield MenuItem::linkTo(TestDriveCrudController::class, 'Test drives à encaisser', 'fas fa-cash-register')
             ->setPermission('ROLE_CASHIER');
         yield MenuItem::linkToRoute('Ajouter un test drive', 'fas fa-plus', TestDriveCrudController::ADD_ROUTE)
-            ->setPermission('ROLE_CASHIER');
+            ->setPermission('ROLE_ADMIN');
         yield MenuItem::linkTo(FundContributionCrudController::class, 'Historique de la cagnotte', 'fas fa-coins')
-            ->setPermission('ROLE_CASHIER');
-        yield MenuItem::linkToRoute('Ajouter un montant', 'fas fa-hand-holding-dollar', FundContributionCrudController::ADD_ROUTE)
             ->setPermission('ROLE_CASHIER');
         yield MenuItem::section('Utilisateurs')->setPermission('ROLE_ADMIN');
         yield MenuItem::linkTo(CommercialUserCrudController::class, 'Équipe', 'fas fa-user-tie')
@@ -98,6 +96,7 @@ class DashboardController extends AbstractDashboardController
             ->addCssFile('css/admin.css')
             ->addCssFile('css/toast.css')
             ->addJsFile(Asset::new('js/toast.js')->defer())
-            ->addJsFile(Asset::new('js/fund-live.js')->defer());
+            ->addJsFile(Asset::new('js/fund-live.js')->defer())
+            ->addJsFile(Asset::new('js/admin-modal.js')->defer());
     }
 }
