@@ -41,12 +41,28 @@ final class CreateAdminCommandTest extends KernelTestCase
         $this->tester->setInputs(['vente@alphaford.tn', 'secret-pass', 'secret-pass']);
 
         self::assertSame(Command::SUCCESS, $this->tester->execute(['--commercial' => true]));
-        self::assertStringContainsString('Commercial user "vente@alphaford.tn" created', $this->tester->getDisplay());
+        self::assertStringContainsString('Cashier user "vente@alphaford.tn" created', $this->tester->getDisplay());
 
         $user = $this->entityManager()->getRepository(AdminUser::class)->findOneBy(['email' => 'vente@alphaford.tn']);
         self::assertNotNull($user);
-        self::assertContains('ROLE_COMMERCIAL', $user->getRoles());
+        self::assertContains('ROLE_CASHIER', $user->getRoles());
         self::assertNotContains('ROLE_ADMIN', $user->getRoles());
+    }
+
+    public function testCreatesAReservationsAccountWithTheRoleOption(): void
+    {
+        $this->tester->setInputs(['resa@alphaford.tn', 'secret-pass', 'secret-pass']);
+
+        self::assertSame(Command::SUCCESS, $this->tester->execute(['--role' => 'reservations']));
+
+        $user = $this->entityManager()->getRepository(AdminUser::class)->findOneBy(['email' => 'resa@alphaford.tn']);
+        self::assertSame(['ROLE_RESERVATIONS'], $user->getStaffRoles());
+    }
+
+    public function testRefusesAnUnknownRole(): void
+    {
+        self::assertSame(Command::FAILURE, $this->tester->execute(['--role' => 'boss']));
+        self::assertCount(0, $this->entityManager()->getRepository(AdminUser::class)->findAll());
     }
 
     public function testRepromptsOnInvalidAnswers(): void

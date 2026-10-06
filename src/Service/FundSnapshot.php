@@ -11,11 +11,11 @@ final class FundSnapshot
 {
     public function __construct(
         public readonly int $total,
-        /** Validated test drives (one 30 DT contribution each). */
+        /** Cashed-in test drives (one contribution each: amount received + Alpha Ford share). */
         public readonly int $testDrives,
         public readonly int $clientAmount,
         public readonly int $alphaFordAmount,
-        /** Opening amount collected outside the site (SOLIDARITY_FUND_AMOUNT). */
+        /** Opening amount collected outside the site (SOLIDARITY_FUND_AMOUNT) plus amounts added by hand. */
         public readonly int $otherAmount,
     ) {
     }

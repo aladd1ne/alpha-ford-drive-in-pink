@@ -11,8 +11,8 @@ use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
 /**
- * Cagnotte side of a test drive approval: adds one 30 DT contribution
- * (10 DT client + 20 DT Alpha Ford) for the reservation.
+ * Cagnotte side of a test drive approval: adds one contribution for the reservation,
+ * the amount received from the client plus Alpha Ford's 20 DT.
  *
  * Idempotent: a reservation that already has a contribution is not credited again
  * (and the unique reservation column of fund_contribution refuses it anyway).
@@ -36,7 +36,7 @@ final class CreditFundOnTestDriveApproved
             return;
         }
 
-        $contribution = FundContribution::forTestDrive($event->reservation, $event->approvedAt, $event->approvedBy);
+        $contribution = FundContribution::forTestDrive($event->reservation, $event->approvedAt, $event->approvedBy, $event->clientAmount);
         $manager = $this->registry->getManagerForClass(FundContribution::class)
             ?? throw new \LogicException('No entity manager for fund contributions.');
         $manager->persist($contribution);

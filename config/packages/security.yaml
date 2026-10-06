@@ -3,9 +3,14 @@ security:
         App\Entity\AdminUser:
             algorithm: auto
 
-    # A commercial validates test drives; an admin can do everything a commercial does.
+    # ROLE_COMMERCIAL is the back-office access shared by the staff roles:
+    # - ROLE_RESERVATIONS manages the reservations (confirm, edit, archive, October requests);
+    # - ROLE_CASHIER cashes in the event-day test drives and the cagnotte amounts.
+    # An admin can do everything both can.
     role_hierarchy:
-        ROLE_ADMIN: [ROLE_COMMERCIAL]
+        ROLE_RESERVATIONS: [ROLE_COMMERCIAL]
+        ROLE_CASHIER: [ROLE_COMMERCIAL]
+        ROLE_ADMIN: [ROLE_RESERVATIONS, ROLE_CASHIER]
 
     providers:
         admin_users:

@@ -39,8 +39,10 @@ final class ValidReservationValidator extends ConstraintValidator
             $this->violation($constraint->vehicleMessage, 'vehicle');
         }
 
-        if (null === $date) {
-            return; // reported by NotNull
+        // Added by hand, or already booked and edited in the back-office (where
+        // ReservationManager checks date / slot changes): no booking rule applies.
+        if (null === $date || $value->isManual() || null !== $value->getId()) {
+            return; // a missing date is reported by NotNull
         }
 
         if (!$experience->hasSlots()) {

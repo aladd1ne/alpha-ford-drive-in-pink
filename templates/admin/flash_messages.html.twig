@@ -1,7 +1,7 @@
 {#
  # EasyAdmin flash messages, except the "cagnotte" ones (added when a test drive credits
  # the fund), rendered as a toast sliding in from the top right by js/toast.js.
- # A cagnotte message is an array: {amount: int, total: int}.
+ # A cagnotte message is an array: {amount: int, total: int, title?: string}.
  #}
 {% set ea = ea() %}
 {% trans_default_domain null != ea ? ea.i18n.translationDomain : (translation_domain is defined ? translation_domain ?? 'messages') %}
@@ -9,7 +9,7 @@
 {% set flash_messages = app.flashes %}
 
 {% for credit in flash_messages.cagnotte|default([]) %}
-    <template data-toast data-variant="fund" data-badge="+{{ credit.amount|number_format(0, ',', ' ') }} DT" data-title="Test drive validé — cagnotte créditée">
+    <template data-toast data-variant="fund" data-badge="+{{ credit.amount|number_format(0, ',', ' ') }} DT" data-title="{{ credit.title|default('Test drive validé — cagnotte créditée') }}">
         Nouveau total de la cagnotte : {{ credit.total|number_format(0, ',', ' ') }} DT
     </template>
 {% endfor %}

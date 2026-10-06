@@ -74,7 +74,7 @@ class ReservationRepository extends ServiceEntityRepository
     }
 
     /**
-     * Non-cancelled reservations per experience slug, for the back-office dashboard.
+     * Active (not cancelled or archived) reservations per experience slug, for the back-office dashboard.
      *
      * @return array<string, int>
      */
@@ -82,9 +82,9 @@ class ReservationRepository extends ServiceEntityRepository
     {
         $rows = $this->createQueryBuilder('r')
             ->select('r.experience AS experience, COUNT(r.id) AS total')
-            ->where('r.status != :cancelled')
+            ->where('r.status NOT IN (:inactive)')
             ->groupBy('r.experience')
-            ->setParameter('cancelled', ReservationStatus::Cancelled)
+            ->setParameter('inactive', ReservationStatus::inactive())
             ->getQuery()
             ->getArrayResult();
 
@@ -126,9 +126,11 @@ class ReservationRepository extends ServiceEntityRepository
         return $qb
             ->addSelect(sprintf('CASE WHEN %1$s.testDriveStatus = :toValidate AND %1$s.status != :cancelled THEN 0 ELSE 1 END AS HIDDEN validationOrder', $alias))
             ->andWhere(sprintf('%s.date = :day', $alias))
+            ->andWhere(sprintf('%s.status != :archived', $alias))
             ->setParameter('day', $day, Types::DATE_IMMUTABLE)
             ->setParameter('toValidate', TestDriveStatus::ToValidate)
             ->setParameter('cancelled', ReservationStatus::Cancelled)
+            ->setParameter('archived', ReservationStatus::Archived)
             ->orderBy('validationOrder', 'ASC')
             ->addOrderBy(sprintf('%s.slot', $alias), 'ASC')
             ->addOrderBy(sprintf('%s.createdAt', $alias), 'ASC');
@@ -143,10 +145,10 @@ class ReservationRepository extends ServiceEntityRepository
             ->select('COUNT(r.id)')
             ->where('r.date = :day')
             ->andWhere('r.testDriveStatus = :toValidate')
-            ->andWhere('r.status != :cancelled')
+            ->andWhere('r.status NOT IN (:inactive)')
             ->setParameter('day', $day, Types::DATE_IMMUTABLE)
             ->setParameter('toValidate', TestDriveStatus::ToValidate)
-            ->setParameter('cancelled', ReservationStatus::Cancelled)
+            ->setParameter('inactive', ReservationStatus::inactive())
             ->getQuery()
             ->getSingleScalarResult();
     }

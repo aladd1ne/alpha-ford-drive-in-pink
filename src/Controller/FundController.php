@@ -29,8 +29,6 @@ class FundController extends AbstractController
     {
         return $this->render('fund/index.html.twig', [
             'fund' => $this->fund->snapshot(),
-            'amountPerTestDrive' => FundContribution::TEST_DRIVE_AMOUNT,
-            'clientShare' => FundContribution::CLIENT_SHARE,
             'alphaFordShare' => FundContribution::ALPHA_FORD_SHARE,
         ]);
     }

@@ -29,7 +29,7 @@ class AppFixtures extends Fixture
 
         $commercial = new AdminUser();
         $commercial->setEmail(self::COMMERCIAL_EMAIL);
-        $commercial->setRoles(['ROLE_COMMERCIAL']);
+        $commercial->setRoles([AdminUser::ROLE_CASHIER]);
         $commercial->setPassword($this->passwordHasher->hashPassword($commercial, self::COMMERCIAL_PASSWORD));
         $manager->persist($commercial);
 

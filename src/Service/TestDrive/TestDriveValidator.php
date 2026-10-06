@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\TestDrive;
 
+use App\Entity\FundContribution;
 use App\Entity\Reservation;
 use App\Enum\ReservationStatus;
 use App\Event\TestDriveApproved;
@@ -18,7 +19,7 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 /**
  * Commercial confirmation that a test drive took place: marks the reservation as
  * driven and dispatches TestDriveApproved, which the cagnotte listens to in order to
- * credit the solidarity fund (10 DT client + 20 DT Alpha Ford), once.
+ * credit the solidarity fund (amount received from the client + 20 DT Alpha Ford), once.
  *
  * The event is dispatched inside the transaction, so the approval and the credit are
  * committed together; an approval that no listener credited is rolled back.
@@ -40,10 +41,11 @@ final class TestDriveValidator
     /**
      * @throws ReservationNotFoundException
      * @param bool $allowFutureDate admin override: accept a test drive planned for a later day
+     * @param int  $clientAmount    amount received from the client at the checkout, in DT
      *
      * @throws TestDriveNotEligibleException when the reservation is cancelled, or for a later day without the override
      */
-    public function validate(int $reservationId, string $validatedBy, bool $allowFutureDate = false): ValidationOutcome
+    public function validate(int $reservationId, string $validatedBy, bool $allowFutureDate = false, int $clientAmount = FundContribution::CLIENT_SHARE): ValidationOutcome
     {
         $em = $this->manager();
         $connection = $em->getConnection();
@@ -67,7 +69,7 @@ final class TestDriveValidator
             $now = $this->clock->now();
             $reservation->markTestDriveCompleted($now, $validatedBy);
 
-            $event = $this->dispatcher->dispatch(new TestDriveApproved($reservation, $now, $validatedBy));
+            $event = $this->dispatcher->dispatch(new TestDriveApproved($reservation, $now, $validatedBy, $clientAmount));
             if (null === $event->getContribution()) {
                 throw new \LogicException(sprintf('Test drive #%d was approved but the cagnotte was not credited.', $reservationId));
             }
@@ -94,6 +96,10 @@ final class TestDriveValidator
     {
         if (ReservationStatus::Cancelled === $reservation->getStatus()) {
             throw new TestDriveNotEligibleException('Cette réservation est annulée.');
+        }
+
+        if (ReservationStatus::Archived === $reservation->getStatus()) {
+            throw new TestDriveNotEligibleException('Cette réservation est archivée.');
         }
 
         if (null === $reservation->getDate()) {

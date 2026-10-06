@@ -21,6 +21,9 @@ use Symfony\Component\Validator\Constraints as Assert;
  * The unique constraint on that tuple is what prevents concurrent double bookings;
  * a request without a guaranteed slot (October) or a released booking has a null seat.
  *
+ * A test drive added by hand in the back-office (a walk-in) has no slot nor seat and
+ * records who added it (createdBy); see createManual().
+ *
  * The booking status (status) and the test drive status (testDriveStatus) are separate
  * columns. Confirming that the drive took place completes the test drive, confirms a
  * pending booking, and credits the solidarity fund (see FundContribution).
@@ -93,6 +96,10 @@ class Reservation
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
+    /** E-mail of the back-office user who added this test drive by hand; null for online bookings. */
+    #[ORM\Column(length: 180, nullable: true)]
+    private ?string $createdBy = null;
+
     /** 8 to 15 digits, optional leading "+", spaces, dots or dashes allowed. */
     public const PHONE_PATTERN = '/^\+?(?:[\s.\-]?\d){8,15}$/';
 
@@ -105,6 +112,19 @@ class Reservation
         if (!$experience->hasVehicleChoice()) {
             $this->vehicle = $experience->vehicles()[0];
         }
+    }
+
+    /**
+     * Test drive added by hand in the back-office for the given day (no slot, no seat):
+     * the online booking rules (event dates, slots, capacity) do not apply to it.
+     */
+    public static function createManual(Experience $experience, \DateTimeImmutable $date, string $createdBy, ?\DateTimeImmutable $createdAt = null): self
+    {
+        $reservation = new self($experience, $createdAt);
+        $reservation->date = $date;
+        $reservation->createdBy = $createdBy;
+
+        return $reservation;
     }
 
     public function getId(): ?int
@@ -211,6 +231,16 @@ class Reservation
         return $this->createdAt;
     }
 
+    public function getCreatedBy(): ?string
+    {
+        return $this->createdBy;
+    }
+
+    public function isManual(): bool
+    {
+        return null !== $this->createdBy;
+    }
+
     public function getTestDriveStatus(): TestDriveStatus
     {
         return $this->testDriveStatus;
@@ -233,15 +263,59 @@ class Reservation
 
     /**
      * Whether this test drive may be confirmed on the given (event-local) day: not yet
-     * validated, not cancelled, and not planned for a later day unless $allowFutureDate
+     * validated, not cancelled or archived, and not planned for a later day unless $allowFutureDate
      * (admin override).
      */
     public function canValidateTestDrive(\DateTimeInterface $today, bool $allowFutureDate = false): bool
     {
         return !$this->isTestDriveCompleted()
-            && ReservationStatus::Cancelled !== $this->status
+            && $this->status->isActive()
             && null !== $this->date
             && ($allowFutureDate || $this->date->format('Y-m-d') <= $today->format('Y-m-d'));
+    }
+
+    /**
+     * Slot booking of an event day: its date, vehicle and slot hold a seat. Walk-ins and
+     * "autres jours d'octobre" requests only have a date (and a vehicle).
+     */
+    public function isSlotBooking(): bool
+    {
+        return $this->experience->hasSlots() && !$this->isManual();
+    }
+
+    public function confirm(): static
+    {
+        if (ReservationStatus::Pending !== $this->status) {
+            throw new \LogicException('Only a pending reservation can be confirmed.');
+        }
+
+        $this->status = ReservationStatus::Confirmed;
+
+        return $this;
+    }
+
+    /**
+     * Hides the reservation from the active lists and frees its seat for a new booking.
+     */
+    public function archive(): static
+    {
+        $this->status = ReservationStatus::Archived;
+        $this->seat = null;
+
+        return $this;
+    }
+
+    /**
+     * Moves a slot booking to another date / vehicle / slot, on the given free seat.
+     */
+    public function reschedule(\DateTimeImmutable $date, Vehicle $vehicle, string $slot, int $seat): static
+    {
+        $this->date = $date;
+        $this->vehicle = $vehicle;
+        $this->slot = $slot;
+        $this->seat = $seat;
+
+        return $this;
     }
 
     public function markTestDriveCompleted(\DateTimeImmutable $at, string $validatedBy): static
