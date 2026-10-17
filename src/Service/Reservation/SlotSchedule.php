@@ -18,7 +18,8 @@ final class SlotSchedule
 
     /**
      * @param list<string>                                                      $slots       "HH:MM-HH:MM"
-     * @param array<string, array{capacity?: int, opens_at?: string, dates: array<string, string>}> $experiences slug => config
+     * @param array<string, array{capacity?: int, opens_at?: string, dates: array<string, string|list<string>>}> $experiences slug => config
+     *                                                                                  (date => closing "HH:MM" of the shared slots, or the day's own "HH:MM-HH:MM" list)
      */
     public function __construct(
         #[Autowire(param: 'app.reservation.slots')]
@@ -77,43 +78,49 @@ final class SlotSchedule
     }
 
     /**
-     * All configured slots: start ("09:00") => label ("09h00 – 09h30").
+     * All configured slots (shared ones and those listed on specific days), by start time:
+     * start ("09:00") => label ("09h00 – 09h30").
      *
      * @return array<string, string>
      */
     public function allSlots(): array
     {
-        $slots = [];
-        foreach ($this->slots as $slot) {
-            [$start, $end] = explode('-', $slot);
-            $slots[$start] = str_replace(':', 'h', $start) . ' – ' . str_replace(':', 'h', $end);
+        $ranges = $this->slots;
+        foreach ($this->experiences as $config) {
+            foreach ($config['dates'] as $day) {
+                if (\is_array($day)) {
+                    array_push($ranges, ...$day);
+                }
+            }
         }
+
+        $slots = $this->labels($ranges);
+        ksort($slots);
 
         return $slots;
     }
 
     /**
-     * Slots offered on a given event day (those ending before the day's closing time).
+     * Slots offered on a given event day: the day's own list, or the shared slots
+     * ending before the day's closing time.
      *
      * @return array<string, string>
      */
     public function slotsFor(Experience $experience, \DateTimeInterface $date): array
     {
-        $closing = $this->experiences[$experience->value]['dates'][$date->format('Y-m-d')] ?? null;
-        if (null === $closing) {
+        $day = $this->experiences[$experience->value]['dates'][$date->format('Y-m-d')] ?? null;
+        if (null === $day) {
             return [];
         }
 
-        $labels = $this->allSlots();
-        $slots = [];
-        foreach ($this->slots as $slot) {
-            [$start, $end] = explode('-', $slot);
-            if ($end <= $closing) {
-                $slots[$start] = $labels[$start];
-            }
+        if (\is_array($day)) {
+            return $this->labels($day);
         }
 
-        return $slots;
+        return $this->labels(array_values(array_filter(
+            $this->slots,
+            static fn (string $slot): bool => explode('-', $slot)[1] <= $day,
+        )));
     }
 
     public function slotStartsAt(\DateTimeInterface $date, string $slot): \DateTimeImmutable
@@ -174,6 +181,22 @@ final class SlotSchedule
     public function dayOf(\DateTimeInterface $instant): \DateTimeImmutable
     {
         return $this->day(\DateTimeImmutable::createFromInterface($instant)->setTimezone($this->timezone)->format('Y-m-d'));
+    }
+
+    /**
+     * @param list<string> $ranges "HH:MM-HH:MM"
+     *
+     * @return array<string, string> start ("09:00") => label ("09h00 – 09h30")
+     */
+    private function labels(array $ranges): array
+    {
+        $slots = [];
+        foreach ($ranges as $range) {
+            [$start, $end] = explode('-', $range);
+            $slots[$start] = str_replace(':', 'h', $start) . ' – ' . str_replace(':', 'h', $end);
+        }
+
+        return $slots;
     }
 
     private function day(string $ymd): \DateTimeImmutable
