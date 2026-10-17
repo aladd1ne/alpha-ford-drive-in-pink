@@ -1,9 +1,9 @@
 # Drive in Pink — test drive reservations.
 #
 # - slots: shared time slots ("start-end").
-# - experiences.<slug>.dates: event day => end of the last bookable slot that day
-#   (Friday runs until 16:15, Saturday stops at 14:00).
-#   No slot between 12:45 and 14:00 (lunch break).
+# - experiences.<slug>.dates: event day => either the end of the last bookable shared
+#   slot that day (Everest Ranger: Friday until 16:15, Saturday stops at 14:00, no slot
+#   between 12:45 and 14:00), or the day's own list of slots ("start-end").
 # - experiences.<slug>.capacity: bookings accepted per date + vehicle + slot.
 # - experiences.<slug>.opens_at: optional first day bookings are accepted (before it, a pop-up says so).
 # - request_month: month accepted by the "autres jours d'octobre" request form
@@ -29,10 +29,30 @@ parameters:
                 '2026-10-10': '14:00'
         territory:
             capacity: 1
-            opens_at: '2026-10-19'
             dates:
-                '2026-10-23': '16:15'
-                '2026-10-24': '14:00'
+                '2026-10-23':
+                    - '09:00-09:30'
+                    - '09:30-10:00'
+                    - '10:00-10:30'
+                    - '10:30-11:00'
+                    - '11:00-11:30'
+                    - '11:30-12:00'
+                    - '13:30-14:00'
+                    - '14:00-14:30'
+                    - '14:30-15:00'
+                    - '15:00-15:30'
+                    - '15:30-16:00'
+                '2026-10-24':
+                    - '09:00-09:30'
+                    - '09:30-10:00'
+                    - '10:00-10:30'
+                    - '10:30-11:00'
+                    - '11:00-11:30'
+                    - '11:30-12:00'
+                    - '12:00-12:30'
+                    - '12:30-13:00'
+                    - '13:00-13:30'
+                    - '13:30-14:00'
 
     app.reservation.request_month: '2026-10'
     app.reservation.request_closed_dates:

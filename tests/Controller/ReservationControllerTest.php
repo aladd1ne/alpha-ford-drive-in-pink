@@ -10,7 +10,6 @@ use App\Enum\Vehicle;
 use App\Tests\DatabaseTrait;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\Clock\MockClock;
 
 final class ReservationControllerTest extends WebTestCase
 {
@@ -99,22 +98,18 @@ final class ReservationControllerTest extends WebTestCase
         self::assertSelectorTextContains('.dp-form', 'Adresse e-mail invalide.');
     }
 
-    public function testTerritoryIsClosedUntilOpeningDay(): void
+    public function testTerritoryIsOpen(): void
     {
         $crawler = $this->client->request('GET', '/');
-        self::assertSame('Les inscriptions seront ouvertes à partir du 19 octobre.', $crawler->filter('a[href="/reservation/territory"]')->attr('data-closed-message'));
-        self::assertNull($crawler->filter('a[href="/reservation/everest-ranger"]')->attr('data-closed-message'));
+        self::assertNull($crawler->filter('a[href="/reservation/territory"]')->attr('data-closed-message'));
 
-        $this->client->request('GET', '/reservation/territory');
-        self::assertResponseRedirects('/reservation');
-        $this->client->followRedirect();
-        self::assertSelectorExists('dialog[data-closed-modal][data-open]');
-        self::assertSelectorTextContains('[data-closed-modal-message]', 'Les inscriptions seront ouvertes à partir du 19 octobre.');
+        $crawler = $this->client->request('GET', '/reservation/territory');
+        self::assertResponseIsSuccessful();
+        self::assertCount(1, $crawler->filter('form.dp-form'));
     }
 
     public function testTerritoryBookingNeedsNoVehicleChoice(): void
     {
-        $this->openTerritory();
         $crawler = $this->client->request('GET', '/reservation/territory');
         self::assertCount(0, $crawler->filter('input[name="reservation[vehicle]"]'));
 
@@ -166,7 +161,6 @@ final class ReservationControllerTest extends WebTestCase
 
     public function testFullExperienceShowsCompleteButton(): void
     {
-        $this->openTerritory();
         $this->fillExperience(Experience::Territory);
 
         $crawler = $this->client->request('GET', '/reservation');
@@ -184,21 +178,9 @@ final class ReservationControllerTest extends WebTestCase
 
     public function testConfirmationPageNeedsASubmission(): void
     {
-        $this->openTerritory();
         $this->client->request('GET', '/reservation/territory/confirmation');
 
         self::assertResponseRedirects('/reservation/territory');
-    }
-
-    /**
-     * Territory bookings open on 19 October: move the frozen clock there (slots of the 23-24 stay ahead).
-     */
-    private function openTerritory(): void
-    {
-        $this->client->disableReboot();
-        /** @var MockClock $clock */
-        $clock = static::getContainer()->get('clock');
-        $clock->modify('2026-10-19 08:00:00');
     }
 
     /**

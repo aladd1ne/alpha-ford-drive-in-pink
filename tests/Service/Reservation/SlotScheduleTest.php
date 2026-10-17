@@ -39,22 +39,41 @@ final class SlotScheduleTest extends KernelTestCase
         self::assertArrayNotHasKey('14:15', $slots);
     }
 
-    public function testNoSlotDuringTheLunchBreak(): void
+    public function testNoEverestRangerSlotDuringTheLunchBreak(): void
     {
-        $slots = $this->schedule->allSlots();
+        $slots = $this->schedule->slotsFor(Experience::EverestRanger, new \DateTimeImmutable('2026-10-09'));
 
         self::assertArrayNotHasKey('12:45', $slots);
         self::assertArrayNotHasKey('13:30', $slots);
         self::assertArrayHasKey('14:15', $slots);
     }
 
-    public function testTerritoryUsesTheSameHoursOnItsOwnDates(): void
+    public function testTerritoryFridayHasHalfHourSlotsWithALunchBreak(): void
     {
         $dates = array_map(static fn (\DateTimeImmutable $d): string => $d->format('Y-m-d'), $this->schedule->dates(Experience::Territory));
-
         self::assertSame(['2026-10-23', '2026-10-24'], $dates);
-        self::assertCount(8, $this->schedule->slotsFor(Experience::Territory, new \DateTimeImmutable('2026-10-23')));
-        self::assertCount(5, $this->schedule->slotsFor(Experience::Territory, new \DateTimeImmutable('2026-10-24')));
+
+        $slots = $this->schedule->slotsFor(Experience::Territory, new \DateTimeImmutable('2026-10-23'));
+
+        self::assertSame(['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '13:30', '14:00', '14:30', '15:00', '15:30'], array_keys($slots));
+        self::assertSame('15h30 – 16h00', end($slots));
+    }
+
+    public function testTerritorySaturdayRunsUntil1400(): void
+    {
+        $slots = $this->schedule->slotsFor(Experience::Territory, new \DateTimeImmutable('2026-10-24'));
+
+        self::assertSame(['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30'], array_keys($slots));
+        self::assertSame('13h30 – 14h00', end($slots));
+    }
+
+    public function testAllSlotsCoverEveryExperienceSortedByStart(): void
+    {
+        $starts = array_keys($this->schedule->allSlots());
+
+        self::assertContains('09:45', $starts);
+        self::assertContains('13:30', $starts);
+        self::assertSame($starts, (static function (array $s): array { sort($s); return $s; })($starts));
     }
 
     public function testNoSlotsOutsideAnExperienceDates(): void
