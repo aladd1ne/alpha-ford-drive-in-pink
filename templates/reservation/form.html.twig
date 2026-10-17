@@ -56,7 +56,7 @@
                 <p class="dp-subhead">{{ intro.subhead }}</p>
                 {# Experience photo(s); replaced by the chosen vehicle's photo (public/js/reservation.js) #}
                 {% set has_visual = car_images[experience.value] is defined %}
-                {% if has_visual or experience.hasVehicleChoice %}
+                {% if car_videos[experience.value] is not defined and (has_visual or experience.hasVehicleChoice) %}
                     <div class="dp-visual dp-sec-head__visual" data-vehicle-preview{% if not has_visual %} hidden{% endif %}>
                         {% include '_car_visual.html.twig' with {experience: experience.value} only %}
                     </div>
@@ -67,6 +67,13 @@
                 <p class="dp-sec-head__text">{{ intro.text }}</p>
             </div>
         </div>
+
+        {# Experience video: full container width, under the heading #}
+        {% if car_videos[experience.value] is defined %}
+            <div class="dp-visual dp-page__video">
+                {% include '_car_video.html.twig' with {experience: experience.value} only %}
+            </div>
+        {% endif %}
 
         {% if full %}
             <div class="dp-res-full">
@@ -147,4 +154,5 @@
         <script src="{{ asset('js/vendor/flatpickr-fr.js') }}" defer></script>
     {% endif %}
     <script src="{{ asset('js/reservation.js') }}" defer></script>
+    <script src="{{ asset('js/car-video.js') }}" defer></script>
 {% endblock %}

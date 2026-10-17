@@ -9,6 +9,9 @@ twig:
                 - { src: 'assets/images/cars/ranger.jpg', alt: 'Ford Ranger' }
             territory:
                 - { src: 'assets/images/cars/territory.jpeg', alt: 'Ford Territory' }
+        # Video per experience slug (public/ paths), rendered by templates/_car_video.html.twig.
+        car_videos:
+            territory: 'assets/video/territory.mp4'
         # One photo per Vehicle enum value, shown on the booking form's vehicle cards and preview.
         vehicle_images:
             ranger_raptor: 'assets/images/cars/raptor.jpg'
