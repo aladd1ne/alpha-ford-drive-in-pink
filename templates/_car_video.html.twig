@@ -1,0 +1,15 @@
+{#
+    Video of an experience (see "car_videos" in config/packages/twig.yaml), played as a
+    background: muted (browsers only autoplay muted video), looped, no controls.
+    public/js/car-video.js plays it while on screen; until then (or without JavaScript,
+    with reduced motion or data saver on) the poster photo is shown.
+    Cinematic styling: .dp-video* in public/css/front.css.
+    Expects: experience (slug). Render inside an element with the "dp-visual" class.
+#}
+{% set poster = car_images[experience][0].src ?? null %}
+<video class="dp-video" data-car-video{% if poster %} poster="{{ asset(poster) }}"{% endif %}
+       muted loop playsinline webkit-playsinline disablepictureinpicture disableremoteplayback preload="none" aria-hidden="true" tabindex="-1">
+    <source src="{{ asset(car_videos[experience]) }}" type="video/mp4">
+</video>
+{# Cinematic finish over the video: vignette + grain, and a black veil lifted once it plays #}
+<span class="dp-video__fx" aria-hidden="true"></span>
