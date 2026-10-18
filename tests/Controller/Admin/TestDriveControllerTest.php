@@ -46,7 +46,7 @@ final class TestDriveControllerTest extends WebTestCase
             self::assertStringContainsString($expected, $row);
         }
         self::assertSelectorTextContains('table.datagrid', 'Encaisser');
-        self::assertSame('30', $crawler->filter('form.dp-validate-test-drive input[name="amount"]')->attr('value'), '10 DT client + 20 DT Alpha Ford.');
+        self::assertStringContainsString('30 DT (10 DT client + 20 DT Alpha Ford)', $crawler->filter('form.dp-validate-test-drive')->text());
         self::assertCount(1, $crawler->filter(sprintf('form[action$="/admin/test-drives/%d/validate"]', $today->getId())));
     }
 
@@ -109,34 +109,38 @@ final class TestDriveControllerTest extends WebTestCase
         $this->loginAs(['ROLE_ADMIN']);
 
         $crawler = $this->client->request('GET', '/admin/test-drives?day=2026-10-09');
-        $this->client->submit($crawler->filter('form.dp-validate-test-drive')->form(['amount' => '35']));
+        $this->client->submit($crawler->filter('form.dp-validate-test-drive')->form());
 
         self::assertResponseRedirects('/admin/test-drives?day=2026-10-09');
         $toast = $this->client->followRedirect()->filter('template[data-toast]');
-        self::assertSame('+35 DT', $toast->attr('data-badge'));
+        self::assertSame('+30 DT', $toast->attr('data-badge'));
         $contribution = $this->contributions()[0];
-        self::assertSame(15, $contribution->getClientAmount());
+        self::assertSame(10, $contribution->getClientAmount());
         self::assertSame(20, $contribution->getAlphaFordAmount());
-        self::assertSame(35, $contribution->getAmount());
+        self::assertSame(30, $contribution->getAmount());
         $future = $this->reload($future);
         self::assertSame(TestDriveStatus::Completed, $future->getTestDriveStatus());
         self::assertSame(ReservationStatus::Confirmed, $future->getStatus());
     }
 
-    public function testCashInRequiresAValidAmount(): void
+    public function testCashInAmountIsFixed(): void
     {
         $reservation = $this->booking('2026-10-01', '09:00');
         $this->loginAs(['ROLE_CASHIER']);
-        $token = $this->tokenFor($reservation);
 
-        foreach (['', '-5', 'abc', '19', '10001'] as $amount) {
-            $this->client->request('POST', sprintf('/admin/test-drives/%d/validate', $reservation->getId()), ['_token' => $token, 'amount' => $amount]);
-            self::assertResponseRedirects('/admin/test-drives');
-            $this->client->followRedirect();
-            self::assertSelectorTextContains('.alert-danger', 'montant reçu');
-        }
+        $crawler = $this->client->request('GET', '/admin/test-drives');
+        $form = $crawler->filter('form.dp-validate-test-drive');
+        self::assertCount(0, $form->filter('input[name="amount"]'), 'The cashier cannot change the amount.');
+        self::assertStringContainsString('30 DT (10 DT client + 20 DT Alpha Ford)', $form->text());
 
-        self::assertCount(0, $this->contributions());
+        // An amount sent anyway is ignored.
+        $this->client->request('POST', sprintf('/admin/test-drives/%d/validate', $reservation->getId()), ['_token' => $this->tokenFor($reservation), 'amount' => '500']);
+
+        self::assertResponseRedirects('/admin/test-drives');
+        $contribution = $this->contributions()[0];
+        self::assertSame(10, $contribution->getClientAmount());
+        self::assertSame(20, $contribution->getAlphaFordAmount());
+        self::assertSame(30, $contribution->getAmount());
     }
 
     public function testReservationsRoleCannotCashIn(): void
@@ -146,7 +150,7 @@ final class TestDriveControllerTest extends WebTestCase
 
         $this->client->request('GET', '/admin/test-drives');
         self::assertResponseStatusCodeSame(403);
-        $this->client->request('POST', sprintf('/admin/test-drives/%d/validate', $reservation->getId()), ['_token' => 'x', 'amount' => '30']);
+        $this->client->request('POST', sprintf('/admin/test-drives/%d/validate', $reservation->getId()), ['_token' => 'x']);
         self::assertResponseStatusCodeSame(403);
         self::assertCount(0, $this->contributions());
     }
@@ -168,8 +172,8 @@ final class TestDriveControllerTest extends WebTestCase
             self::assertStringContainsString($expected, $text);
         }
 
-        // Admins may cash in any day: "Valider" takes the amount received.
-        self::assertCount(1, $crawler->filter('form.dp-row-action--confirmAndCashIn input[name="amount"]'));
+        // Admins may cash in any day: "Valider" can cash the test drive in as well.
+        self::assertCount(1, $crawler->filter('form.dp-row-action--confirmAndCashIn input[name="cash_in"]'));
     }
 
     public function testReturnUrlOutsideTheBackOfficeIsIgnored(): void
@@ -181,7 +185,6 @@ final class TestDriveControllerTest extends WebTestCase
         $this->client->request('POST', sprintf('/admin/test-drives/%d/validate', $reservation->getId()), [
             '_token' => $token,
             '_return' => 'https://evil.example/admin/',
-            'amount' => '30',
         ]);
 
         self::assertResponseRedirects('/admin/test-drives');
@@ -306,7 +309,6 @@ final class TestDriveControllerTest extends WebTestCase
             'manual_test_drive[experience]' => Experience::EverestRanger->value,
             'manual_test_drive[vehicle]' => Vehicle::RangerRaptor->value,
             'manual_test_drive[completed]' => true,
-            'manual_test_drive[amount]' => '10',
         ]);
 
         self::assertResponseRedirects();
@@ -390,7 +392,7 @@ final class TestDriveControllerTest extends WebTestCase
 
     private function postValidate(int $reservationId, string $token): Crawler
     {
-        return $this->client->request('POST', sprintf('/admin/test-drives/%d/validate', $reservationId), ['_token' => $token, 'amount' => '30']);
+        return $this->client->request('POST', sprintf('/admin/test-drives/%d/validate', $reservationId), ['_token' => $token]);
     }
 
     private function reload(Reservation $reservation): Reservation

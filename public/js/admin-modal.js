@@ -4,27 +4,20 @@
  *
  *   <button type="button" data-modal-open="dialog-id">   opens the <dialog> of that id
  *   <button type="button" data-modal-close>              closes its dialog
- *   <input name="amount" data-default="30">              total received, reset to its default on
- *   <p data-modal-total>                                 each opening; its client / Alpha Ford split
- *                                                        is shown as it is typed
+ *   <input data-default="...">                           reset to that value on each opening
+ *   <input type="checkbox" data-default-checked>         ticked again on each opening
+ *   <input name="client_amount|alpha_ford_amount">       the two parts of a credit being corrected,
+ *   <p data-modal-split-total>                           their sum shown as they are typed
  */
 (() => {
     const describe = (dialog) => {
-        const input = dialog.querySelector('input[name="amount"]');
-        const total = dialog.querySelector('[data-modal-total]');
-        if (!input || !total) {
+        const total = dialog.querySelector('[data-modal-split-total]');
+        if (!total) {
             return;
         }
-        const share = parseInt(dialog.dataset.alphaFordShare, 10) || 0;
-        const amount = input.value.trim();
-        const value = parseInt(amount, 10) || 0;
-        if ('' === amount) {
-            total.textContent = 'Aucun encaissement : la réservation sera seulement validée.';
-        } else if (value < share) {
-            total.textContent = `Le montant total inclut les ${share} DT d’Alpha Ford : ${share} DT minimum.`;
-        } else {
-            total.textContent = `Cagnotte créditée de ${value} DT (${value - share} DT client + ${share} DT Alpha Ford).`;
-        }
+        const client = parseInt(dialog.querySelector('input[name="client_amount"]')?.value, 10) || 0;
+        const alphaFord = parseInt(dialog.querySelector('input[name="alpha_ford_amount"]')?.value, 10) || 0;
+        total.textContent = `Nouveau montant : ${client + alphaFord} DT (${client} DT client + ${alphaFord} DT Alpha Ford).`;
     };
 
     document.addEventListener('click', (event) => {
@@ -34,11 +27,14 @@
             if (!dialog) {
                 return;
             }
-            const input = dialog.querySelector('input[name="amount"]');
-            if (input) {
-                input.value = input.dataset.default ?? '';
-                describe(dialog);
-            }
+            dialog.querySelectorAll('input[data-default]').forEach((field) => {
+                field.value = field.dataset.default;
+            });
+            dialog.querySelectorAll('input[data-default-checked]').forEach((field) => {
+                field.checked = true;
+            });
+            describe(dialog);
+            const input = dialog.querySelector('input[data-default]');
             dialog.showModal();
             (input ?? dialog.querySelector('[type="submit"]'))?.focus();
             input?.select();

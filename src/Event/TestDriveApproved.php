@@ -25,8 +25,6 @@ final class TestDriveApproved extends Event
         public readonly Reservation $reservation,
         public readonly \DateTimeImmutable $approvedAt,
         public readonly string $approvedBy,
-        /** Amount received from the client at the checkout, in DT. */
-        public readonly int $clientAmount = FundContribution::CLIENT_SHARE,
     ) {
     }
 
