@@ -219,15 +219,14 @@ class ReservationCrudController extends AbstractCrudController
     }
 
     /**
-     * Confirms the booking. With an amount (cashier only), the test drive is cashed in
-     * instead: the reservation is confirmed and the cagnotte credited in one go.
+     * Confirms the booking. With "cash_in" (cashier only), the test drive is cashed in
+     * instead: the reservation is confirmed and the cagnotte credited with the fixed
+     * FundContribution::TEST_DRIVE_AMOUNT in one go.
      */
     #[AdminRoute(path: '/{entityId}/confirmer', name: 'confirm', options: ['methods' => ['POST'], 'requirements' => ['entityId' => '\d+']])]
     public function confirmReservation(Request $request): RedirectResponse
     {
-        $amount = trim((string) $request->request->get('amount'));
-
-        if ('' === $amount) {
+        if (!$request->request->getBoolean('cash_in')) {
             return $this->postAction($request, 'reservation-confirm-', function (Reservation $reservation): void {
                 $this->manager->confirm($reservation);
                 $this->addFlash('success', sprintf('Réservation de %s validée.', $reservation->getFullName()));
@@ -236,16 +235,12 @@ class ReservationCrudController extends AbstractCrudController
 
         $this->denyAccessUnlessGranted('ROLE_CASHIER');
 
-        return $this->postAction($request, 'reservation-confirm-', function (Reservation $reservation) use ($amount): void {
-            $clientAmount = TestDriveCrudController::clientAmountOf($amount)
-                ?? throw new ReservationChangeException(TestDriveCrudController::invalidAmountMessage());
-
+        return $this->postAction($request, 'reservation-confirm-', function (Reservation $reservation): void {
             try {
                 $outcome = $this->validator->validate(
                     (int) $reservation->getId(),
                     $this->getUser()?->getUserIdentifier() ?? 'inconnu',
                     true,
-                    $clientAmount,
                 );
             } catch (ReservationNotFoundException $e) {
                 throw $this->createNotFoundException($e->getMessage(), $e);
@@ -255,7 +250,7 @@ class ReservationCrudController extends AbstractCrudController
 
             if (ValidationOutcome::Validated === $outcome) {
                 // Shown as a toast with the new total (templates/admin/flash_messages.html.twig).
-                $this->addFlash('cagnotte', ['amount' => (int) $amount, 'total' => $this->fund->total()]);
+                $this->addFlash('cagnotte', ['amount' => FundContribution::TEST_DRIVE_AMOUNT, 'total' => $this->fund->total()]);
             } else {
                 $this->addFlash('info', 'Ce test drive était déjà encaissé : aucun montant ajouté.');
             }
@@ -309,7 +304,7 @@ class ReservationCrudController extends AbstractCrudController
 
     /**
      * Walk-in test drive, added by hand for today (no slot). When "déjà effectué" is ticked,
-     * it is cashed in right away with the amount received, through TestDriveValidator.
+     * it is cashed in right away with the fixed amount, through TestDriveValidator.
      * Reservations team and admins (not the cashier).
      */
     #[IsGranted('ROLE_RESERVATIONS')]
@@ -317,7 +312,7 @@ class ReservationCrudController extends AbstractCrudController
     public function addTestDrive(Request $request): Response
     {
         $today = $this->schedule->dayOf($this->clock->now());
-        $form = $this->createForm(ManualTestDriveType::class, ['completed' => true, 'amount' => FundContribution::CLIENT_SHARE]);
+        $form = $this->createForm(ManualTestDriveType::class, ['completed' => true]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -339,9 +334,8 @@ class ReservationCrudController extends AbstractCrudController
                 $this->entityManager->persist($reservation);
                 $this->entityManager->flush();
 
-                $amount = (int) $data['amount'];
-                if ($data['completed'] && ValidationOutcome::Validated === $this->validator->validate((int) $reservation->getId(), $user, clientAmount: $amount)) {
-                    $this->addFlash('cagnotte', ['amount' => $amount + FundContribution::ALPHA_FORD_SHARE, 'total' => $this->fund->total()]);
+                if ($data['completed'] && ValidationOutcome::Validated === $this->validator->validate((int) $reservation->getId(), $user)) {
+                    $this->addFlash('cagnotte', ['amount' => FundContribution::TEST_DRIVE_AMOUNT, 'total' => $this->fund->total()]);
                 } else {
                     $this->addFlash('success', sprintf('Test drive de %s ajouté.', $reservation->getFullName()));
                 }

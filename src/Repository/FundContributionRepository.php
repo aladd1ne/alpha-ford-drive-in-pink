@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\FundContribution;
+use App\Entity\Product;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -45,5 +46,29 @@ class FundContributionRepository extends ServiceEntityRepository
             'alphaFordAmount' => (int) $row['alphaFordAmount'],
             'manualAmount' => (int) $row['manualAmount'],
         ];
+    }
+
+    /**
+     * The latest amounts added by hand (no reservation), newest first.
+     *
+     * @return list<FundContribution>
+     */
+    public function latestManual(int $limit): array
+    {
+        return $this->createQueryBuilder('c')
+            ->andWhere('c.reservation IS NULL')
+            ->orderBy('c.createdAt', 'DESC')
+            ->addOrderBy('c.id', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Whether a sale of this product was already recorded (it can then no longer be deleted).
+     */
+    public function isProductSold(Product $product): bool
+    {
+        return null !== $this->findOneBy(['product' => $product]);
     }
 }

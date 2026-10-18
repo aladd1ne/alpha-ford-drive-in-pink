@@ -1,0 +1,51 @@
+{# Admin's "Corriger" on the cagnotte history: opens a modal with the current amounts (for a
+   test drive, what was received from the client and what Alpha Ford gives, the new total
+   shown as they are typed; for a manual amount, the amount itself) and an optional reason,
+   then POSTs them with a CSRF token. #}
+{# @var action \EasyCorp\Bundle\EasyAdminBundle\Dto\ActionDto #}
+{# @var entity \EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto #}
+{% set contribution = entity.instance %}
+{% set dialog_id = 'dp-modal-' ~ action.name ~ '-' ~ contribution.id %}
+{% set max_amount = constant('App\\Controller\\Admin\\TestDriveCrudController::MAX_RECEIVED_AMOUNT') %}
+<form action="{{ action.linkUrl }}" method="post" class="d-inline dp-row-action dp-row-action--{{ action.name }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('correct-contribution-' ~ contribution.id) }}">
+    <input type="hidden" name="_return" value="{{ app.request.requestUri }}">
+    <button type="button" class="btn btn-sm btn-secondary" data-modal-open="{{ dialog_id }}">
+        {% if action.icon %}<i class="{{ action.icon }}"></i>{% endif %} <span class="action-label">{{ action.label|trans }}</span>
+    </button>
+    <dialog id="{{ dialog_id }}" class="dp-modal-dialog" aria-labelledby="{{ dialog_id }}-title">
+        <p class="dp-modal-dialog__title" id="{{ dialog_id }}-title">
+            Corriger {{ contribution.isManual() ? 'le montant « ' ~ contribution.origin() ~ ' »' : 'le test drive de ' ~ contribution.reservation.fullName }}
+        </p>
+        <p class="dp-modal-dialog__message">Montant actuel : {{ contribution.amount }} DT. Le total de la cagnotte sera mis à jour.</p>
+        {% if contribution.isManual() %}
+            <label class="form-label" for="{{ dialog_id }}-amount">Montant (DT)</label>
+            <div class="input-group">
+                <input type="number" id="{{ dialog_id }}-amount" name="amount" value="{{ contribution.amount }}" data-default="{{ contribution.amount }}"
+                       min="1" max="{{ constant('App\\Form\\Admin\\FundContributionType::MAX_AMOUNT') }}" step="1" class="form-control" required>
+                <span class="input-group-text">DT</span>
+            </div>
+        {% else %}
+            <label class="form-label" for="{{ dialog_id }}-client">Reçu du client (DT)</label>
+            <div class="input-group">
+                <input type="number" id="{{ dialog_id }}-client" name="client_amount" value="{{ contribution.clientAmount }}" data-default="{{ contribution.clientAmount }}"
+                       min="0" max="{{ max_amount }}" step="1" class="form-control" required>
+                <span class="input-group-text">DT</span>
+            </div>
+            <label class="form-label mt-2" for="{{ dialog_id }}-alpha-ford">Donné par Alpha Ford (DT)</label>
+            <div class="input-group">
+                <input type="number" id="{{ dialog_id }}-alpha-ford" name="alpha_ford_amount" value="{{ contribution.alphaFordAmount }}" data-default="{{ contribution.alphaFordAmount }}"
+                       min="0" max="{{ max_amount }}" step="1" class="form-control" required>
+                <span class="input-group-text">DT</span>
+            </div>
+            <p class="dp-modal-dialog__help" data-modal-split-total>Nouveau montant : {{ contribution.amount }} DT ({{ contribution.clientAmount }} DT client + {{ contribution.alphaFordAmount }} DT Alpha Ford).</p>
+        {% endif %}
+        <label class="form-label mt-2" for="{{ dialog_id }}-reason">Raison de la correction <span class="text-muted">(facultatif)</span></label>
+        <input type="text" id="{{ dialog_id }}-reason" name="reason" class="form-control"
+               maxlength="{{ constant('App\\Controller\\Admin\\FundContributionCrudController::REASON_MAX_LENGTH') }}" placeholder="Ex. : erreur de saisie à l’encaissement">
+        <div class="dp-modal-dialog__actions">
+            <button type="button" class="btn btn-secondary" data-modal-close>Annuler</button>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-pen"></i> Corriger</button>
+        </div>
+    </dialog>
+</form>

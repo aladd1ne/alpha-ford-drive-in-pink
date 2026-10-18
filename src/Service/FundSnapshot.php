@@ -11,7 +11,7 @@ final class FundSnapshot
 {
     public function __construct(
         public readonly int $total,
-        /** Cashed-in test drives (one contribution each: amount received + Alpha Ford share). */
+        /** Cashed-in test drives (one contribution each: client share + Alpha Ford share). */
         public readonly int $testDrives,
         public readonly int $clientAmount,
         public readonly int $alphaFordAmount,

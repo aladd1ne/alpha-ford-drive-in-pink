@@ -49,9 +49,9 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /**
  * Cashier space ("Encaissement"): the reservations of one event day (a tab per day,
- * today by default) and the "Encaisser" action, where the cashier enters the amount
- * received; the test drive is then validated and the cagnotte credited with that amount
- * plus Alpha Ford's share (see TestDriveValidator). Walk-ins are added by the
+ * today by default) and the "Encaisser" action: the test drive is validated and the
+ * cagnotte credited with the fixed amount, FundContribution::TEST_DRIVE_AMOUNT (the
+ * client's share plus Alpha Ford's, see TestDriveValidator). Walk-ins are added by the
  * reservations team (ReservationCrudController::addTestDrive()).
  *
  * @extends AbstractCrudController<Reservation>
@@ -65,7 +65,7 @@ class TestDriveCrudController extends AbstractCrudController
 
     public const VALIDATE_ACTION = 'validateTestDrive';
     public const VALIDATE_ROUTE = 'admin_test_drive_validate';
-    /** Highest amount a cashier can enter for one test drive, in DT. */
+    /** Highest amount an admin can set when correcting one part of a test drive credit, in DT. */
     public const MAX_RECEIVED_AMOUNT = 10000;
 
     public function __construct(
@@ -91,7 +91,7 @@ class TestDriveCrudController extends AbstractCrudController
             ->setEntityLabelInSingular('Test drive')
             ->setEntityLabelInPlural('Encaissement')
             ->setPageTitle(Crud::PAGE_INDEX, 'Encaissement du ' . $this->selectedDay()->format('d/m/Y'))
-            ->setHelp(Crud::PAGE_INDEX, sprintf('« Encaisser » puis saisissez le montant total (%d DT par défaut, dont %d DT d’Alpha Ford) : le test drive est validé et la cagnotte reçoit ce montant.', FundContribution::TEST_DRIVE_AMOUNT, FundContribution::ALPHA_FORD_SHARE))
+            ->setHelp(Crud::PAGE_INDEX, sprintf('« Encaisser » : le test drive est validé et la cagnotte reçoit %d DT (%d DT du client + %d DT d’Alpha Ford).', FundContribution::TEST_DRIVE_AMOUNT, FundContribution::CLIENT_SHARE, FundContribution::ALPHA_FORD_SHARE))
             ->overrideTemplate('crud/index', 'admin/test_drive/index.html.twig')
             ->setSearchFields(['fullName', 'email', 'phone'])
             ->setPaginatorPageSize(100)
@@ -171,7 +171,8 @@ class TestDriveCrudController extends AbstractCrudController
     }
 
     /**
-     * Cash-in: the amount received is required; the cagnotte gets it plus Alpha Ford's share.
+     * Cash-in: the cagnotte always gets FundContribution::TEST_DRIVE_AMOUNT (any submitted
+     * amount is ignored; an admin can still correct a credit from the cagnotte history).
      */
     #[IsGranted('ROLE_CASHIER')]
     #[AdminRoute(path: '/{entityId}/validate', name: 'validate', options: ['methods' => ['POST'], 'requirements' => ['entityId' => '\d+']])]
@@ -186,20 +187,11 @@ class TestDriveCrudController extends AbstractCrudController
             return $this->redirect($return);
         }
 
-        $amount = trim((string) $request->request->get('amount'));
-        $clientAmount = self::clientAmountOf($amount);
-        if (null === $clientAmount) {
-            $this->addFlash('danger', self::invalidAmountMessage());
-
-            return $this->redirect($return);
-        }
-
         try {
             $outcome = $this->validator->validate(
                 $reservationId,
                 $this->getUser()?->getUserIdentifier() ?? 'inconnu',
                 $this->isGranted('ROLE_CASHIER'),
-                $clientAmount,
             );
         } catch (ReservationNotFoundException $e) {
             throw $this->createNotFoundException($e->getMessage(), $e);
@@ -211,31 +203,12 @@ class TestDriveCrudController extends AbstractCrudController
 
         if (ValidationOutcome::Validated === $outcome) {
             // Shown as a toast with the new total (templates/admin/flash_messages.html.twig).
-            $this->addFlash('cagnotte', ['amount' => (int) $amount, 'total' => $this->fund->total()]);
+            $this->addFlash('cagnotte', ['amount' => FundContribution::TEST_DRIVE_AMOUNT, 'total' => $this->fund->total()]);
         } else {
             $this->addFlash('info', 'Ce test drive était déjà encaissé : aucun montant ajouté.');
         }
 
         return $this->redirect($return);
-    }
-
-    /**
-     * The cash-in modals take the total received, Alpha Ford's share included
-     * (FundContribution::TEST_DRIVE_AMOUNT by default): returns the client's part of it,
-     * or null when it is not a whole number between that share and MAX_RECEIVED_AMOUNT.
-     */
-    public static function clientAmountOf(string $total): ?int
-    {
-        if (!ctype_digit($total) || (int) $total < FundContribution::ALPHA_FORD_SHARE || (int) $total > self::MAX_RECEIVED_AMOUNT) {
-            return null;
-        }
-
-        return (int) $total - FundContribution::ALPHA_FORD_SHARE;
-    }
-
-    public static function invalidAmountMessage(): string
-    {
-        return sprintf('Saisissez le montant reçu (total, dont %d DT d’Alpha Ford), entre %d et %d DT.', FundContribution::ALPHA_FORD_SHARE, FundContribution::ALPHA_FORD_SHARE, self::MAX_RECEIVED_AMOUNT);
     }
 
     /**

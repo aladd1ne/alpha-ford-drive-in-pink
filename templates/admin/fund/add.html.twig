@@ -1,0 +1,171 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+{% form_theme form 'bootstrap_5_layout.html.twig' %}
+
+{% block page_title %}Ajouter à la cagnotte{% endblock %}
+
+{% block main %}
+    <p class="text-muted">Un don d’une personne inscrite sur le site ou la vente d’un produit pour la cause. Cagnotte actuelle : <strong>{{ total|number_format(0, ',', ' ') }} DT</strong> ; le montant ajouté apparaît tout de suite sur le site, dans « autres contributions ».</p>
+
+    <div class="card" style="max-width: 640px">
+        <div class="card-body">
+            {{ form_start(form, {attr: {'data-fund-form': ''}}) }}
+                {{ form_errors(form) }}
+                {{ form_row(form.source) }}
+                <div data-fund-fields="{{ constant('App\\Enum\\ContributionSource::Donation').value }}">
+                    {# Donor: a search bar filtering the registered people (by name, phone or e-mail),
+                       a click on one fills the hidden donor field. #}
+                    <div class="mb-3 dp-donor-picker" data-donor-picker>
+                        <label class="form-label" for="dp-donor-search">Donateur (e-mail d’inscription)</label>
+                        {{ form_widget(form.donor) }}
+                        <div class="dp-donor-picker__selected" data-donor-selected hidden>
+                            <i class="fas fa-user-check"></i> <span data-donor-selected-label></span>
+                            <button type="button" class="btn btn-sm btn-link" data-donor-clear>Changer</button>
+                        </div>
+                        <input type="search" id="dp-donor-search" class="form-control{{ form.donor.vars.valid ? '' : ' is-invalid' }}" placeholder="Rechercher par nom, téléphone ou e-mail…" autocomplete="off" data-donor-search>
+                        <ul class="dp-donor-picker__list" role="listbox" data-donor-list>
+                            {% for email, person in donors %}
+                                {# The phone is also searchable by its digits only ("20 000 000" or "20000000"). #}
+                                <li role="option" tabindex="-1" data-email="{{ email }}" data-search="{{ [person.fullName, person.phone, person.phone|replace({' ': '', '.': '', '-': '', '+': ''}), email]|join(' ')|lower }}">
+                                    <span class="dp-donor-picker__person">
+                                        <span class="dp-donor-picker__name">{{ person.fullName }}</span>
+                                        <span class="dp-donor-picker__email">{{ email }}</span>
+                                    </span>
+                                    <span class="dp-donor-picker__phone">{{ person.phone }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                        <p class="dp-donor-picker__empty" data-donor-empty hidden>Aucune inscription ne correspond.</p>
+                        <div class="invalid-feedback d-block">{{ form_errors(form.donor) }}</div>
+                        <div class="form-text">{{ donors|length }} personne{{ donors|length > 1 ? 's' : '' }} inscrite{{ donors|length > 1 ? 's' : '' }} sur le site.</div>
+                    </div>
+                    {{ form_row(form.amount) }}
+                </div>
+                <div data-fund-fields="{{ constant('App\\Enum\\ContributionSource::Product').value }}">
+                    {{ form_row(form.product) }}
+                    {{ form_row(form.quantity) }}
+                    <p class="mb-3">Montant ajouté : <strong data-fund-product-total>—</strong></p>
+                </div>
+                {{ form_row(form.note) }}
+                <div class="d-flex gap-2 mt-3">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Ajouter</button>
+                </div>
+            {{ form_end(form) }}
+        </div>
+    </div>
+
+    {% if latest is not empty %}
+        <h2 class="h5 mt-4">Derniers montants ajoutés</h2>
+        <table class="table table-sm" style="max-width: 860px">
+            <thead>
+                <tr><th>Date</th><th>Origine</th><th class="text-end">Montant</th><th>Ajouté par</th></tr>
+            </thead>
+            <tbody>
+                {% for contribution in latest %}
+                    <tr>
+                        <td>{{ contribution.createdAt|date('d/m/Y H:i') }}</td>
+                        <td>{{ contribution.origin() }}</td>
+                        <td class="text-end">{{ contribution.amount|number_format(0, ',', ' ') }} DT</td>
+                        <td>{{ contribution.validatedBy }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+
+    <script>
+        {# Shows only the fields of the chosen source (the hidden ones are disabled, so not
+           sent) and the amount of a product sale, price × quantity, as it is typed. #}
+        (() => {
+            const form = document.querySelector('[data-fund-form]');
+            const groups = form.querySelectorAll('[data-fund-fields]');
+            const product = form.querySelector('select[data-fund-source="product"]');
+            const quantity = form.querySelector('input[data-fund-source="product"]');
+            const total = form.querySelector('[data-fund-product-total]');
+
+            const showSource = () => {
+                const source = form.querySelector('input[type="radio"]:checked')?.value;
+                groups.forEach((group) => {
+                    const shown = group.dataset.fundFields === source;
+                    group.hidden = !shown;
+                    group.querySelectorAll('input, select').forEach((field) => { field.disabled = !shown; });
+                });
+            };
+            const showTotal = () => {
+                const price = Number(product.selectedOptions[0]?.dataset.price || 0);
+                const count = Number(quantity.value || 0);
+                total.textContent = price > 0 && count > 0 ? `${(price * count).toLocaleString('fr-FR')} DT (${price} DT × ${count})` : '—';
+            };
+
+            const picker = form.querySelector('[data-donor-picker]');
+            const donor = picker.querySelector('[data-donor-value]');
+            const search = picker.querySelector('[data-donor-search]');
+            const list = picker.querySelector('[data-donor-list]');
+            const options = [...list.querySelectorAll('li')];
+            const selected = picker.querySelector('[data-donor-selected]');
+            const empty = picker.querySelector('[data-donor-empty]');
+
+            const filterDonors = () => {
+                const query = search.value.trim().toLowerCase().replace(/^\+|(?<=\d)[\s.\-]+(?=\d)/g, '');
+                let shown = 0;
+                options.forEach((option) => {
+                    option.hidden = !option.dataset.search.includes(query);
+                    shown += option.hidden ? 0 : 1;
+                });
+                empty.hidden = shown > 0;
+            };
+            const chooseDonor = (option) => {
+                donor.value = option?.dataset.email ?? '';
+                options.forEach((item) => item.setAttribute('aria-selected', item === option ? 'true' : 'false'));
+                selected.hidden = !option;
+                search.hidden = list.hidden = !!option;
+                empty.hidden = true;
+                if (option) {
+                    const text = (selector) => option.querySelector(selector).textContent;
+                    selected.querySelector('[data-donor-selected-label]').textContent = `${text('.dp-donor-picker__name')} — ${option.dataset.email} — ${text('.dp-donor-picker__phone')}`;
+                } else {
+                    search.value = '';
+                    filterDonors();
+                    search.focus();
+                }
+            };
+
+            search.addEventListener('input', filterDonors);
+            search.addEventListener('keydown', (event) => {
+                // Enter picks the first match instead of submitting the form; arrow down goes into the list.
+                const first = options.find((option) => !option.hidden);
+                if ('Enter' === event.key) {
+                    event.preventDefault();
+                    if (first) chooseDonor(first);
+                } else if ('ArrowDown' === event.key && first) {
+                    event.preventDefault();
+                    first.focus();
+                }
+            });
+            list.addEventListener('click', (event) => {
+                const option = event.target.closest('li');
+                if (option) chooseDonor(option);
+            });
+            list.addEventListener('keydown', (event) => {
+                const visible = options.filter((option) => !option.hidden);
+                const index = visible.indexOf(document.activeElement);
+                if ('Enter' === event.key && index >= 0) {
+                    event.preventDefault();
+                    chooseDonor(visible[index]);
+                } else if ('ArrowDown' === event.key || 'ArrowUp' === event.key) {
+                    event.preventDefault();
+                    (visible[index + ('ArrowDown' === event.key ? 1 : -1)] ?? ('ArrowUp' === event.key ? search : null))?.focus();
+                }
+            });
+            selected.querySelector('[data-donor-clear]').addEventListener('click', () => chooseDonor(null));
+            // After a failed submit, the donor already chosen stays selected.
+            chooseDonor(options.find((option) => option.dataset.email === donor.value.trim().toLowerCase()) ?? null);
+            search.blur();
+
+            form.addEventListener('change', showSource);
+            product.addEventListener('change', showTotal);
+            quantity.addEventListener('input', showTotal);
+            showSource();
+            showTotal();
+        })();
+    </script>
+{% endblock %}

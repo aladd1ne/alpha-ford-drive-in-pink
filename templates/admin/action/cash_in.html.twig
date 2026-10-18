@@ -1,6 +1,5 @@
-{# "Encaisser": opens a modal asking for the amount received (prefilled with the usual client
-   share, the client may give more), then POSTs it with a CSRF token (EasyAdmin's form
-   actions have none). #}
+{# "Encaisser": opens a modal showing the fixed amount credited to the cagnotte, then POSTs
+   with a CSRF token (EasyAdmin's form actions have none). #}
 {# @var action \EasyCorp\Bundle\EasyAdminBundle\Dto\ActionDto #}
 {# @var entity \EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto #}
 {% set dialog_id = 'dp-modal-' ~ action.name ~ '-' ~ entity.instance.id %}
@@ -14,7 +13,7 @@
         id: dialog_id,
         title: 'Encaisser le test drive de ' ~ entity.instance.fullName,
         message: 'Le test drive sera validé et la cagnotte créditée.',
-        amount: true,
+        cash_in: true,
         submit_label: 'Encaisser',
         submit_icon: 'fas fa-cash-register',
     }) }}
