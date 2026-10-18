@@ -10,7 +10,10 @@ use App\Enum\Experience;
 use App\Enum\ReservationStatus;
 use App\Enum\TestDriveStatus;
 use App\Enum\Vehicle;
+use App\Service\SolidarityFund;
+use App\Service\TestDrive\TestDriveValidator;
 use App\Tests\DatabaseTrait;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\DomCrawler\Crawler;
@@ -300,8 +303,11 @@ final class TestDriveControllerTest extends WebTestCase
     {
         $this->loginAs(['ROLE_ADMIN']);
 
-        $this->client->request('GET', '/admin/reservation/ajouter');
+        $crawler = $this->client->request('GET', '/admin/reservation/ajouter');
         self::assertResponseIsSuccessful();
+        $date = $crawler->filter('input[name="manual_test_drive[date]"]');
+        self::assertSame('2026-10-01', $date->attr('value'), 'Today by default.');
+        self::assertSame('2026-10-01', $date->attr('min'), 'From October of this year.');
         $this->client->submitForm('Ajouter', [
             'manual_test_drive[fullName]' => 'Walk In Client',
             'manual_test_drive[phone]' => '+216 22 333 444',
@@ -343,6 +349,88 @@ final class TestDriveControllerTest extends WebTestCase
         self::assertCount(0, $this->contributions());
         $crawler = $this->client->request('GET', '/admin/test-drives');
         self::assertCount(1, $crawler->filter('form.dp-validate-test-drive'), 'It can be cashed in from the cashier list.');
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function walkInDates(): iterable
+    {
+        yield 'first day of October' => ['2026-10-01'];
+        yield 'later in October' => ['2026-10-10'];
+        yield 'future day' => ['2026-11-20'];
+    }
+
+    #[DataProvider('walkInDates')]
+    public function testWalkInCanBeAddedOnAnyDate(string $date): void
+    {
+        $this->loginAs(['ROLE_ADMIN']);
+        $this->client->request('GET', '/admin/reservation/ajouter');
+        $this->client->submitForm('Ajouter', [
+            'manual_test_drive[fullName]' => 'Walk In Client',
+            'manual_test_drive[phone]' => '+216 22 333 444',
+            'manual_test_drive[email]' => 'walkin@example.com',
+            'manual_test_drive[experience]' => Experience::Territory->value,
+            'manual_test_drive[date]' => $date,
+            'manual_test_drive[vehicle]' => Vehicle::Territory->value,
+            'manual_test_drive[completed]' => true,
+        ]);
+
+        self::assertResponseRedirects();
+        $reservation = $this->entityManager()->getRepository(Reservation::class)->findOneBy(['email' => 'walkin@example.com']);
+        self::assertSame($date, $reservation->getDate()->format('Y-m-d'));
+        self::assertTrue($reservation->isTestDriveCompleted(), 'Cashed in right away, whatever the date.');
+        self::assertCount(1, $this->contributions());
+    }
+
+    public function testWalkInCannotBeBeforeOctober(): void
+    {
+        $this->loginAs(['ROLE_ADMIN']);
+        $this->client->request('GET', '/admin/reservation/ajouter');
+        $this->client->submitForm('Ajouter', [
+            'manual_test_drive[fullName]' => 'Walk In Client',
+            'manual_test_drive[phone]' => '+216 22 333 444',
+            'manual_test_drive[email]' => 'walkin@example.com',
+            'manual_test_drive[experience]' => Experience::Territory->value,
+            'manual_test_drive[date]' => '2026-09-30',
+            'manual_test_drive[vehicle]' => Vehicle::Territory->value,
+        ]);
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('form[name="manual_test_drive"]', 'La date doit être à partir du 01/10/2026.');
+        self::assertCount(0, $this->entityManager()->getRepository(Reservation::class)->findBy(['email' => 'walkin@example.com']));
+    }
+
+    public function testWalkInOnADayWithCashedInDrivesAddsOneMoreToTheCagnotte(): void
+    {
+        $validator = static::getContainer()->get(TestDriveValidator::class);
+        foreach (range(1, 5) as $seat) {
+            $reservation = $this->createBooking(Experience::Territory, '2026-10-10', Vehicle::Territory, '09:00', $seat);
+            $this->entityManager()->flush();
+            $validator->validate((int) $reservation->getId(), 'caisse@alphaford.tn', true);
+        }
+        $fund = static::getContainer()->get(SolidarityFund::class);
+        self::assertSame(5, $fund->snapshot()->testDrives);
+
+        $this->loginAs(['ROLE_ADMIN']);
+        $this->client->request('GET', '/admin/reservation/ajouter');
+        $this->client->submitForm('Ajouter', [
+            'manual_test_drive[fullName]' => 'Walk In Client',
+            'manual_test_drive[phone]' => '+216 22 333 444',
+            'manual_test_drive[email]' => 'walkin@example.com',
+            'manual_test_drive[experience]' => Experience::Territory->value,
+            'manual_test_drive[date]' => '2026-10-10',
+            'manual_test_drive[vehicle]' => Vehicle::Territory->value,
+            'manual_test_drive[completed]' => true,
+        ]);
+        self::assertResponseRedirects();
+        $this->assertCagnotteToast($this->client->followRedirect(), $this->openingAmount() + 6 * 30);
+
+        $snapshot = $fund->snapshot();
+        self::assertSame(6, $snapshot->testDrives);
+        self::assertSame($this->openingAmount() + 6 * 30, $snapshot->total);
+        $crawler = $this->client->request('GET', '/admin/test-drives?day=2026-10-10');
+        self::assertCount(6, $crawler->filter('table.datagrid tbody tr'), 'Listed with the other drives of that day.');
     }
 
     public function testWalkInVehicleMustMatchTheExperience(): void

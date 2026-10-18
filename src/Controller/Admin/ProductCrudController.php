@@ -67,7 +67,9 @@ class ProductCrudController extends AbstractCrudController
     {
         yield TextField::new('name', 'Nom');
         yield IntegerField::new('price', 'Prix (DT)')
-            ->setFormTypeOption('attr', ['min' => 1, 'max' => Product::MAX_PRICE, 'step' => 1]);
+            ->setRequired(false)
+            ->setFormTypeOption('attr', ['min' => 0, 'max' => Product::MAX_PRICE, 'step' => 1])
+            ->setHelp('0 ou vide pour un produit offert.');
         yield BooleanField::new('active', 'En vente')
             ->renderAsSwitch(false)
             ->setHelp('Décochez pour ne plus le proposer à la vente.');

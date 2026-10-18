@@ -15,7 +15,8 @@ use Doctrine\ORM\Mapping as ORM;
  *
  * An amount added by hand in the back-office has no reservation: it is a donation made by
  * someone who registered on the site (see donation(), the donor), or the sale of products
- * for the cause (see productSale(), the amount is the product price times the quantity),
+ * for the cause to someone registered (see productSale(), the amount is the product price
+ * times the quantity, the buyer is kept as donor),
  * with an optional note. Older ones have a note only (see manual()).
  *
  * An admin can correct the amounts afterwards (see correctTestDrive() and correctManual()):
@@ -60,7 +61,7 @@ class FundContribution
     #[ORM\Column(length: 20, nullable: true, enumType: ContributionSource::class)]
     private ?ContributionSource $source = null;
 
-    /** Registration of the person who made the donation. */
+    /** Registration of the person who made the donation or bought the product. */
     #[ORM\ManyToOne(targetEntity: Reservation::class)]
     #[ORM\JoinColumn(nullable: true)]
     private ?Reservation $donor = null;
@@ -112,6 +113,11 @@ class FundContribution
             throw new \InvalidArgumentException('A manual contribution must be positive.');
         }
 
+        return self::addedByHand($amount, $note, $at, $addedBy, $source);
+    }
+
+    private static function addedByHand(int $amount, ?string $note, \DateTimeImmutable $at, string $addedBy, ?ContributionSource $source): self
+    {
         $contribution = new self(null, 0, 0, $addedBy, $at);
         $contribution->amount = $amount;
         $note = trim((string) $note);
@@ -133,15 +139,18 @@ class FundContribution
     }
 
     /**
-     * Sale of products for the cause: the amount is the current product price times the quantity.
+     * Sale of products for the cause to a registered person: the amount is the current
+     * product price times the quantity.
      */
-    public static function productSale(Product $product, int $quantity, ?string $note, \DateTimeImmutable $at, string $addedBy): self
+    public static function productSale(Reservation $buyer, Product $product, int $quantity, ?string $note, \DateTimeImmutable $at, string $addedBy): self
     {
         if ($quantity <= 0) {
             throw new \InvalidArgumentException('The quantity must be positive.');
         }
 
-        $contribution = self::manual((int) $product->getPrice() * $quantity, $note, $at, $addedBy, ContributionSource::Product);
+        // A product given away (price 0) is still recorded, for 0 DT.
+        $contribution = self::addedByHand($product->getPrice() * $quantity, $note, $at, $addedBy, ContributionSource::Product);
+        $contribution->donor = $buyer;
         $contribution->product = $product;
         $contribution->quantity = $quantity;
 
@@ -251,7 +260,8 @@ class FundContribution
 
     /**
      * Where the amount comes from, as shown in the back-office: "Test drive : <client>",
-     * "Don : <donor name> (<e-mail>) : <note>", "Achat d’un produit : <product> × <quantity> : <note>"
+     * "Don : <donor name> (<e-mail>) : <note>",
+     * "Achat d’un produit : <product> × <quantity> — <buyer name> (<e-mail>) : <note>"
      * or the note alone (older manual amounts).
      */
     public function origin(): string
@@ -260,11 +270,10 @@ class FundContribution
             return sprintf('Test drive : %s', $this->reservation?->getFullName());
         }
 
-        $detail = match (true) {
-            null !== $this->donor => sprintf('%s (%s)', $this->donor->getFullName(), $this->donor->getEmail()),
-            null !== $this->product => sprintf('%s × %d', $this->product->getName(), $this->quantity),
-            default => null,
-        };
+        $person = null === $this->donor ? null : sprintf('%s (%s)', $this->donor->getFullName(), $this->donor->getEmail());
+        $detail = null === $this->product
+            ? $person
+            : implode(' — ', array_filter([sprintf('%s × %d', $this->product->getName(), $this->quantity), $person]));
 
         return implode(' : ', array_filter([$this->source?->label(), $detail, $this->note], static fn (?string $part): bool => null !== $part && '' !== $part));
     }

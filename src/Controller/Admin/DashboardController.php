@@ -64,7 +64,7 @@ class DashboardController extends AbstractDashboardController
             $data = $form->getData();
             $by = $this->getUser()?->getUserIdentifier() ?? 'inconnu';
             $contribution = ContributionSource::Product === $data['source']
-                ? FundContribution::productSale($data['product'], (int) $data['quantity'], $data['note'] ?? null, $this->clock->now(), $by)
+                ? FundContribution::productSale($data['donor'], $data['product'], (int) $data['quantity'], $data['note'] ?? null, $this->clock->now(), $by)
                 : FundContribution::donation($data['donor'], (int) $data['amount'], $data['note'] ?? null, $this->clock->now(), $by);
             $this->entityManager->persist($contribution);
             $this->entityManager->flush();

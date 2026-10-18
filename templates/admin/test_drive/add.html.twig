@@ -4,7 +4,7 @@
 {% block page_title %}Ajouter un test drive{% endblock %}
 
 {% block main %}
-    <p class="text-muted">Client venu sans réservation : le test drive est enregistré pour aujourd’hui ({{ today|date('d/m/Y') }}), sans créneau.</p>
+    <p class="text-muted">Client venu sans réservation : le test drive est enregistré à la date choisie (aujourd’hui, {{ today|date('d/m/Y') }}, par défaut), sans créneau.</p>
 
     <div class="card" style="max-width: 640px">
         <div class="card-body">
@@ -14,6 +14,7 @@
                 {{ form_row(form.phone) }}
                 {{ form_row(form.email) }}
                 {{ form_row(form.experience) }}
+                {{ form_row(form.date) }}
                 {{ form_row(form.vehicle) }}
                 {{ form_row(form.completed) }}
                 <div class="d-flex gap-2 mt-3">

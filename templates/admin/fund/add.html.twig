@@ -11,33 +11,33 @@
             {{ form_start(form, {attr: {'data-fund-form': ''}}) }}
                 {{ form_errors(form) }}
                 {{ form_row(form.source) }}
-                <div data-fund-fields="{{ constant('App\\Enum\\ContributionSource::Donation').value }}">
-                    {# Donor: a search bar filtering the registered people (by name, phone or e-mail),
-                       a click on one fills the hidden donor field. #}
-                    <div class="mb-3 dp-donor-picker" data-donor-picker>
-                        <label class="form-label" for="dp-donor-search">Donateur (e-mail d’inscription)</label>
-                        {{ form_widget(form.donor) }}
-                        <div class="dp-donor-picker__selected" data-donor-selected hidden>
-                            <i class="fas fa-user-check"></i> <span data-donor-selected-label></span>
-                            <button type="button" class="btn btn-sm btn-link" data-donor-clear>Changer</button>
-                        </div>
-                        <input type="search" id="dp-donor-search" class="form-control{{ form.donor.vars.valid ? '' : ' is-invalid' }}" placeholder="Rechercher par nom, téléphone ou e-mail…" autocomplete="off" data-donor-search>
-                        <ul class="dp-donor-picker__list" role="listbox" data-donor-list>
-                            {% for email, person in donors %}
-                                {# The phone is also searchable by its digits only ("20 000 000" or "20000000"). #}
-                                <li role="option" tabindex="-1" data-email="{{ email }}" data-search="{{ [person.fullName, person.phone, person.phone|replace({' ': '', '.': '', '-': '', '+': ''}), email]|join(' ')|lower }}">
-                                    <span class="dp-donor-picker__person">
-                                        <span class="dp-donor-picker__name">{{ person.fullName }}</span>
-                                        <span class="dp-donor-picker__email">{{ email }}</span>
-                                    </span>
-                                    <span class="dp-donor-picker__phone">{{ person.phone }}</span>
-                                </li>
-                            {% endfor %}
-                        </ul>
-                        <p class="dp-donor-picker__empty" data-donor-empty hidden>Aucune inscription ne correspond.</p>
-                        <div class="invalid-feedback d-block">{{ form_errors(form.donor) }}</div>
-                        <div class="form-text">{{ donors|length }} personne{{ donors|length > 1 ? 's' : '' }} inscrite{{ donors|length > 1 ? 's' : '' }} sur le site.</div>
+                {# Donor or buyer: a search bar filtering the registered people (by name, phone or e-mail),
+                   a click on one fills the hidden donor field. Used by both sources. #}
+                <div class="mb-3 dp-donor-picker" data-donor-picker>
+                    <label class="form-label" for="dp-donor-search">Client (e-mail d’inscription)</label>
+                    {{ form_widget(form.donor) }}
+                    <div class="dp-donor-picker__selected" data-donor-selected hidden>
+                        <i class="fas fa-user-check"></i> <span data-donor-selected-label></span>
+                        <button type="button" class="btn btn-sm btn-link" data-donor-clear>Changer</button>
                     </div>
+                    <input type="search" id="dp-donor-search" class="form-control{{ form.donor.vars.valid ? '' : ' is-invalid' }}" placeholder="Rechercher par nom, téléphone ou e-mail…" autocomplete="off" data-donor-search>
+                    <ul class="dp-donor-picker__list" role="listbox" data-donor-list>
+                        {% for email, person in donors %}
+                            {# The phone is also searchable by its digits only ("20 000 000" or "20000000"). #}
+                            <li role="option" tabindex="-1" data-email="{{ email }}" data-search="{{ [person.fullName, person.phone, person.phone|replace({' ': '', '.': '', '-': '', '+': ''}), email]|join(' ')|lower }}">
+                                <span class="dp-donor-picker__person">
+                                    <span class="dp-donor-picker__name">{{ person.fullName }}</span>
+                                    <span class="dp-donor-picker__email">{{ email }}</span>
+                                </span>
+                                <span class="dp-donor-picker__phone">{{ person.phone }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                    <p class="dp-donor-picker__empty" data-donor-empty hidden>Aucune inscription ne correspond.</p>
+                    <div class="invalid-feedback d-block">{{ form_errors(form.donor) }}</div>
+                    <div class="form-text">{{ donors|length }} personne{{ donors|length > 1 ? 's' : '' }} inscrite{{ donors|length > 1 ? 's' : '' }} sur le site.</div>
+                </div>
+                <div data-fund-fields="{{ constant('App\\Enum\\ContributionSource::Donation').value }}">
                     {{ form_row(form.amount) }}
                 </div>
                 <div data-fund-fields="{{ constant('App\\Enum\\ContributionSource::Product').value }}">
@@ -93,7 +93,7 @@
             const showTotal = () => {
                 const price = Number(product.selectedOptions[0]?.dataset.price || 0);
                 const count = Number(quantity.value || 0);
-                total.textContent = price > 0 && count > 0 ? `${(price * count).toLocaleString('fr-FR')} DT (${price} DT × ${count})` : '—';
+                total.textContent = product.value && count > 0 ? `${(price * count).toLocaleString('fr-FR')} DT (${price} DT × ${count})` : '—';
             };
 
             const picker = form.querySelector('[data-donor-picker]');

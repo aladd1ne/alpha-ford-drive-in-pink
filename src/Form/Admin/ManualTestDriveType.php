@@ -8,8 +8,10 @@ use App\Entity\FundContribution;
 use App\Entity\Reservation;
 use App\Enum\Experience;
 use App\Enum\Vehicle;
+use App\Service\Reservation\SlotSchedule;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
+use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\TelType;
@@ -19,7 +21,8 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * Back-office: a test drive added by hand for today (walk-in). The controller builds the
+ * Back-office: a test drive added by hand (walk-in), on any date from the first day of the
+ * campaign month, October (today by default). The controller builds the
  * Reservation from this data and validates it with the entity's own constraints.
  */
 final class ManualTestDriveType extends AbstractType
@@ -27,8 +30,15 @@ final class ManualTestDriveType extends AbstractType
     /** Fields named like Reservation properties: the entity's violations are shown on them. */
     public const ENTITY_FIELDS = ['fullName', 'phone', 'email', 'vehicle'];
 
+    public function __construct(
+        private readonly SlotSchedule $schedule,
+    ) {
+    }
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+        $first = $this->schedule->requestPeriod()[0]->format('Y-m-d');
+
         $builder
             ->add('fullName', TextType::class, ['label' => 'Nom et prénom'])
             ->add('phone', TelType::class, ['label' => 'Téléphone', 'attr' => ['placeholder' => '+216 XX XXX XXX']])
@@ -38,6 +48,19 @@ final class ManualTestDriveType extends AbstractType
                 'label' => 'Expérience',
                 'constraints' => [new Assert\NotNull(message: 'Veuillez choisir une expérience.')],
                 'choice_label' => static fn (Experience $experience): string => $experience->label(),
+            ])
+            ->add('date', DateType::class, [
+                'label' => 'Date du test drive',
+                'widget' => 'single_text',
+                // A plain Y-m-d day: the controller reads it in the schedule's time zone.
+                'input' => 'string',
+                'input_format' => 'Y-m-d',
+                'attr' => ['min' => $first],
+                'constraints' => [
+                    new Assert\NotNull(message: 'Veuillez choisir une date.'),
+                    // Y-m-d strings compare like dates.
+                    new Assert\GreaterThanOrEqual(value: $first, message: sprintf('La date doit être à partir du %s.', (new \DateTimeImmutable($first))->format('d/m/Y'))),
+                ],
             ])
             ->add('vehicle', EnumType::class, [
                 'class' => Vehicle::class,

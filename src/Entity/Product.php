@@ -36,13 +36,10 @@ class Product
     ])]
     private string $name = '';
 
-    /** Unit price in DT. */
+    /** Unit price in DT; 0 (or left empty) for a product given away. */
     #[ORM\Column]
-    #[Assert\Sequentially([
-        new Assert\NotBlank(message: 'Veuillez saisir le prix du produit.'),
-        new Assert\Range(min: 1, max: self::MAX_PRICE, notInRangeMessage: 'Le prix doit être compris entre {{ min }} et {{ max }} DT.'),
-    ])]
-    private ?int $price = null;
+    #[Assert\Range(min: 0, max: self::MAX_PRICE, notInRangeMessage: 'Le prix doit être compris entre {{ min }} et {{ max }} DT.')]
+    private int $price = 0;
 
     #[ORM\Column(options: ['default' => true])]
     private bool $active = true;
@@ -72,14 +69,14 @@ class Product
         return $this;
     }
 
-    public function getPrice(): ?int
+    public function getPrice(): int
     {
         return $this->price;
     }
 
     public function setPrice(?int $price): static
     {
-        $this->price = $price;
+        $this->price = $price ?? 0;
 
         return $this;
     }
