@@ -24,10 +24,10 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * Back-office, every profile: an amount added to the cagnotte outside any test drive.
- * A donation names its donor by the e-mail of their registration on the site (picked from
- * a searchable list, see templates/admin/fund/add.html.twig) and gives
- * the amount; a product sale picks a product (see ProductCrudController) and a quantity,
- * the amount being its price times the quantity. Only the fields of the chosen source
+ * Both a donation and a product sale name the person (donor or buyer) by the e-mail of
+ * their registration on the site (picked from a searchable list, see
+ * templates/admin/fund/add.html.twig). A donation gives the amount; a product sale picks a
+ * product (see ProductCrudController) and a quantity, the amount being its price times the quantity. Only the fields of the chosen source
  * are validated.
  */
 final class FundContributionType extends AbstractType
@@ -55,8 +55,8 @@ final class FundContributionType extends AbstractType
                 'required' => false,
                 'error_bubbling' => false,
                 'invalid_message' => 'Aucune inscription avec cette adresse e-mail.',
-                'attr' => ['data-fund-source' => ContributionSource::Donation->value, 'data-donor-value' => ''],
-                'constraints' => [new Assert\NotNull(message: 'Choisissez le donateur parmi les inscrits.', groups: [ContributionSource::Donation->value])],
+                'attr' => ['data-donor-value' => ''],
+                'constraints' => [new Assert\NotNull(message: 'Choisissez la personne parmi les inscrits.')],
             ])
             ->add('amount', IntegerType::class, [
                 'label' => 'Montant (DT)',

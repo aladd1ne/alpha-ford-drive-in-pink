@@ -103,12 +103,15 @@ final class FundContributionControllerTest extends WebTestCase
             'fund_contribution[amount]' => '150',
         ]);
         self::assertResponseStatusCodeSame(422);
-        self::assertSelectorTextContains('form', 'Choisissez le donateur parmi les inscrits.');
+        self::assertSelectorTextContains('form', 'Choisissez la personne parmi les inscrits.');
         self::assertCount(0, $this->entityManager()->getRepository(FundContribution::class)->findAll());
     }
 
     public function testAProductSaleCreditsItsPriceTimesTheQuantity(): void
     {
+        $buyer = $this->createBooking(Experience::Territory, '2026-10-01', Vehicle::Territory, '09:00')
+            ->setFullName('Karim Ben Salah')
+            ->setEmail('karim@example.com');
         $em = $this->entityManager();
         $em->persist($product = (new Product())->setName('T-shirt Drive in Pink')->setPrice(25));
         $em->persist((new Product())->setName('Casquette')->setPrice(15)->setActive(false));
@@ -121,6 +124,7 @@ final class FundContributionControllerTest extends WebTestCase
 
         $this->client->submitForm('Ajouter', [
             'fund_contribution[source]' => ContributionSource::Product->value,
+            'fund_contribution[donor]' => 'karim@example.com',
             'fund_contribution[product]' => (string) $product->getId(),
             'fund_contribution[quantity]' => '3',
             // Ignored for a sale: the amount comes from the product price.
@@ -134,13 +138,14 @@ final class FundContributionControllerTest extends WebTestCase
         self::assertSame(75, $contribution->getAmount());
         self::assertSame(3, $contribution->getQuantity());
         self::assertSame(ContributionSource::Product, $contribution->getSource());
+        self::assertSame($buyer->getId(), $contribution->getDonor()?->getId());
 
         // A later price change does not touch the sale.
         $product->setPrice(30);
         $em->flush();
         $crawler = $this->client->request('GET', '/admin/cagnotte');
         $row = $crawler->filter('table.datagrid tbody tr')->first()->text();
-        self::assertStringContainsString('Achat d’un produit : T-shirt Drive in Pink × 3', $row);
+        self::assertStringContainsString('Achat d’un produit : T-shirt Drive in Pink × 3 — Karim Ben Salah (karim@example.com)', $row);
         self::assertStringContainsString('75', $row);
     }
 
@@ -166,7 +171,38 @@ final class FundContributionControllerTest extends WebTestCase
             'fund_contribution[quantity]' => '0',
         ]);
         self::assertResponseStatusCodeSame(422);
+
+        $this->client->submitForm('Ajouter', [
+            'fund_contribution[source]' => ContributionSource::Product->value,
+            'fund_contribution[donor]' => '',
+            'fund_contribution[product]' => (string) $product->getId(),
+            'fund_contribution[quantity]' => '1',
+        ]);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('form', 'Choisissez la personne parmi les inscrits.');
         self::assertCount(0, $em->getRepository(FundContribution::class)->findAll());
+    }
+
+    public function testAFreeProductSaleIsRecordedForZero(): void
+    {
+        $this->createBooking(Experience::Territory, '2026-10-01', Vehicle::Territory, '09:00')->setEmail('karim@example.com');
+        $em = $this->entityManager();
+        $em->persist($product = (new Product())->setName('Badge')->setPrice(0));
+        $em->flush();
+        $this->loginAs(['ROLE_CASHIER']);
+
+        $this->client->request('GET', '/admin/ajouter-a-la-cagnotte');
+        $this->client->submitForm('Ajouter', [
+            'fund_contribution[source]' => ContributionSource::Product->value,
+            'fund_contribution[donor]' => 'karim@example.com',
+            'fund_contribution[product]' => (string) $product->getId(),
+            'fund_contribution[quantity]' => '2',
+        ]);
+
+        self::assertResponseRedirects();
+        $contribution = $em->getRepository(FundContribution::class)->findOneBy([]);
+        self::assertSame(0, $contribution->getAmount());
+        self::assertSame(2, $contribution->getQuantity());
     }
 
     public function testAdminManagesProducts(): void
@@ -187,6 +223,13 @@ final class FundContributionControllerTest extends WebTestCase
         $product = $this->entityManager()->getRepository(Product::class)->findOneBy(['name' => 'Mug Drive in Pink']);
         self::assertSame(20, $product->getPrice());
         self::assertTrue($product->isActive());
+
+        foreach (['Badge' => '0', 'Autocollant' => ''] as $name => $price) {
+            $this->client->request('GET', '/admin/produits/new');
+            $this->client->submitForm('Créer', ['Product[name]' => $name, 'Product[price]' => $price]);
+            self::assertResponseRedirects();
+            self::assertSame(0, $this->entityManager()->getRepository(Product::class)->findOneBy(['name' => $name])->getPrice(), 'A free product: 0 or left empty.');
+        }
     }
 
     public function testASoldProductCannotBeDeleted(): void
@@ -194,7 +237,8 @@ final class FundContributionControllerTest extends WebTestCase
         $em = $this->entityManager();
         $em->persist($sold = (new Product())->setName('T-shirt')->setPrice(25));
         $em->persist((new Product())->setName('Mug')->setPrice(20));
-        $em->persist(FundContribution::productSale($sold, 1, null, new \DateTimeImmutable(), 'caisse@alphaford.tn'));
+        $buyer = $this->createBooking(Experience::Territory, '2026-10-01', Vehicle::Territory, '09:00');
+        $em->persist(FundContribution::productSale($buyer, $sold, 1, null, new \DateTimeImmutable(), 'caisse@alphaford.tn'));
         $em->flush();
 
         $this->loginAs(['ROLE_ADMIN']);
