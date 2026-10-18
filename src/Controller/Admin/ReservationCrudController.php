@@ -303,7 +303,7 @@ class ReservationCrudController extends AbstractCrudController
     }
 
     /**
-     * Walk-in test drive, added by hand for today (no slot). When "déjà effectué" is ticked,
+     * Walk-in test drive, added by hand on any date (today by default, no slot). When "déjà effectué" is ticked,
      * it is cashed in right away with the fixed amount, through TestDriveValidator.
      * Reservations team and admins (not the cashier).
      */
@@ -312,14 +312,14 @@ class ReservationCrudController extends AbstractCrudController
     public function addTestDrive(Request $request): Response
     {
         $today = $this->schedule->dayOf($this->clock->now());
-        $form = $this->createForm(ManualTestDriveType::class, ['completed' => true]);
+        $form = $this->createForm(ManualTestDriveType::class, ['completed' => true, 'date' => $today->format('Y-m-d')]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $data = $form->getData();
             $user = $this->getUser()?->getUserIdentifier() ?? 'inconnu';
             $reservation = ManualTestDriveType::apply(
-                Reservation::createManual($data['experience'], $today, $user, $this->clock->now()),
+                Reservation::createManual($data['experience'], new \DateTimeImmutable($data['date'], $today->getTimezone()), $user, $this->clock->now()),
                 $data,
             );
 
@@ -334,7 +334,7 @@ class ReservationCrudController extends AbstractCrudController
                 $this->entityManager->persist($reservation);
                 $this->entityManager->flush();
 
-                if ($data['completed'] && ValidationOutcome::Validated === $this->validator->validate((int) $reservation->getId(), $user)) {
+                if ($data['completed'] && ValidationOutcome::Validated === $this->validator->validate((int) $reservation->getId(), $user, true)) {
                     $this->addFlash('cagnotte', ['amount' => FundContribution::TEST_DRIVE_AMOUNT, 'total' => $this->fund->total()]);
                 } else {
                     $this->addFlash('success', sprintf('Test drive de %s ajouté.', $reservation->getFullName()));
