@@ -2,10 +2,15 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\FundContribution;
+use App\Enum\ContributionSource;
 use App\Enum\Experience;
+use App\Form\Admin\FundContributionType;
+use App\Repository\FundContributionRepository;
 use App\Repository\ReservationRepository;
 use App\Service\Reservation\SlotSchedule;
 use App\Service\SolidarityFund;
+use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Asset;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Assets;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
@@ -15,17 +20,22 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Option\ColorScheme;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractDashboardController;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Psr\Clock\ClockInterface;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
 class DashboardController extends AbstractDashboardController
 {
+    public const ADD_TO_FUND_ROUTE = 'admin_fund_add';
+
     public function __construct(
         private readonly ReservationRepository $reservations,
         private readonly SolidarityFund $fund,
         private readonly SlotSchedule $schedule,
         private readonly ClockInterface $clock,
         private readonly AdminUrlGenerator $adminUrlGenerator,
+        private readonly FundContributionRepository $contributions,
+        private readonly EntityManagerInterface $entityManager,
     ) {}
 
     #[Route('/admin', name: 'admin')]
@@ -37,6 +47,44 @@ class DashboardController extends AbstractDashboardController
             'fund' => $this->fund->snapshot(),
             'toValidateToday' => $this->reservations->countToValidate($this->schedule->dayOf($this->clock->now())),
         ]);
+    }
+
+    /**
+     * Every profile: adds an amount to the cagnotte outside any test drive: a donation from
+     * someone registered on the site, or the sale of products (price × quantity). Declared on the dashboard so it gets the
+     * back-office layout without the cashier-only cagnotte history.
+     */
+    #[Route('/admin/ajouter-a-la-cagnotte', name: self::ADD_TO_FUND_ROUTE, methods: ['GET', 'POST'])]
+    public function addToFund(Request $request): Response
+    {
+        $form = $this->createForm(FundContributionType::class);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $data = $form->getData();
+            $by = $this->getUser()?->getUserIdentifier() ?? 'inconnu';
+            $contribution = ContributionSource::Product === $data['source']
+                ? FundContribution::productSale($data['product'], (int) $data['quantity'], $data['note'] ?? null, $this->clock->now(), $by)
+                : FundContribution::donation($data['donor'], (int) $data['amount'], $data['note'] ?? null, $this->clock->now(), $by);
+            $this->entityManager->persist($contribution);
+            $this->entityManager->flush();
+
+            // Shown as a toast with the new total (templates/admin/flash_messages.html.twig).
+            $this->addFlash('cagnotte', [
+                'amount' => $contribution->getAmount(),
+                'total' => $this->fund->total(),
+                'title' => sprintf('%s — cagnotte créditée', $data['source']->label()),
+            ]);
+
+            return $this->redirectToRoute(self::ADD_TO_FUND_ROUTE);
+        }
+
+        return $this->render('admin/fund/add.html.twig', [
+            'form' => $form,
+            'total' => $this->fund->total(),
+            'latest' => $this->contributions->latestManual(10),
+            'donors' => $this->reservations->registeredEmails(),
+        ], new Response(status: $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK));
     }
 
     public function configureDashboard(): Dashboard
@@ -70,6 +118,10 @@ class DashboardController extends AbstractDashboardController
             ->setPermission('ROLE_CASHIER');
         yield MenuItem::linkTo(FundContributionCrudController::class, 'Historique de la cagnotte', 'fas fa-coins')
             ->setPermission('ROLE_CASHIER');
+        yield MenuItem::section('Cagnotte');
+        yield MenuItem::linkToRoute('Ajouter un don / une vente', 'fas fa-hand-holding-dollar', self::ADD_TO_FUND_ROUTE);
+        yield MenuItem::linkTo(ProductCrudController::class, 'Produits', 'fas fa-tags')
+            ->setPermission('ROLE_ADMIN');
         yield MenuItem::section('Utilisateurs')->setPermission('ROLE_ADMIN');
         yield MenuItem::linkTo(CommercialUserCrudController::class, 'Équipe', 'fas fa-user-tie')
             ->setPermission('ROLE_ADMIN');

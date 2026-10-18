@@ -1,7 +1,6 @@
-{# Cashier's "Valider" on a reservation list: opens a modal asking for the amount received
-   (prefilled with the usual client share, the client may give more). With an amount the
-   test drive is cashed in too (the cagnotte gets it + Alpha Ford's share); emptied, only
-   the booking is confirmed. #}
+{# Cashier's "Valider" on a reservation list: opens a modal with an "Encaisser aussi"
+   checkbox, ticked by default. Ticked, the test drive is cashed in too (the cagnotte gets
+   the fixed amount); unticked, only the booking is confirmed. #}
 {# @var action \EasyCorp\Bundle\EasyAdminBundle\Dto\ActionDto #}
 {# @var entity \EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto #}
 {% set dialog_id = 'dp-modal-' ~ action.name ~ '-' ~ entity.instance.id %}
@@ -14,8 +13,8 @@
     {{ include('admin/action/_modal.html.twig', {
         id: dialog_id,
         title: 'Valider la réservation de ' ~ entity.instance.fullName,
-        amount: true,
-        amount_required: false,
+        cash_in: true,
+        cash_in_optional: true,
         submit_label: 'Valider',
         submit_icon: 'fas fa-check',
     }) }}

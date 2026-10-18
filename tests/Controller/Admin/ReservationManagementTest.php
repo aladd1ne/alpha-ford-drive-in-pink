@@ -123,15 +123,17 @@ final class ReservationManagementTest extends WebTestCase
         self::assertSame(ReservationStatus::Confirmed, $confirmed->getStatus());
     }
 
-    public function testCashierConfirmsWithoutAmountWithoutCreditingTheCagnotte(): void
+    public function testCashierConfirmsWithoutCashInWithoutCreditingTheCagnotte(): void
     {
         $reservation = $this->createBooking(Experience::EverestRanger, '2026-10-01', Vehicle::RangerRaptor, '09:00');
         $this->loginAs(['ROLE_CASHIER']);
 
         $crawler = $this->client->request('GET', '/admin/reservation');
         self::assertResponseIsSuccessful();
-        // The modal is prefilled with the client share: emptied, only the booking is confirmed.
-        $this->client->submit($crawler->filter('form.dp-row-action--confirmAndCashIn')->form(['amount' => '']));
+        // "Encaisser aussi" is ticked by default: unticked, only the booking is confirmed.
+        $form = $crawler->filter('form.dp-row-action--confirmAndCashIn')->form();
+        $form->remove('cash_in'); // an unticked checkbox is not sent
+        $this->client->submit($form);
         $this->client->followRedirect();
 
         self::assertSelectorTextContains('.alert-success', 'validée');
@@ -141,25 +143,26 @@ final class ReservationManagementTest extends WebTestCase
         self::assertCount(0, $this->contributions());
     }
 
-    public function testCashierConfirmsWithTheAmountReceivedAndCreditsTheCagnotte(): void
+    public function testCashierConfirmsAndCashesInTheFixedAmount(): void
     {
         $reservation = $this->createBooking(Experience::EverestRanger, '2026-10-01', Vehicle::RangerRaptor, '09:00');
         $this->loginAs(['ROLE_CASHIER']);
 
         $crawler = $this->client->request('GET', '/admin/reservation');
-        $this->client->submit($crawler->filter('form.dp-row-action--confirmAndCashIn')->form(['amount' => '35']));
+        $this->client->submit($crawler->filter('form.dp-row-action--confirmAndCashIn')->form());
 
         self::assertResponseRedirects('/admin/reservation');
         $crawler = $this->client->followRedirect();
-        self::assertSame('+35 DT', $crawler->filter('template[data-toast]')->attr('data-badge'));
+        self::assertSame('+30 DT', $crawler->filter('template[data-toast]')->attr('data-badge'));
         $cashed = $this->reload($reservation);
         self::assertSame(ReservationStatus::Confirmed, $cashed->getStatus());
         self::assertTrue($cashed->isTestDriveCompleted());
         self::assertSame('resa@alphaford.tn', $cashed->getTestDriveValidatedBy());
         $contributions = $this->contributions();
         self::assertCount(1, $contributions);
-        self::assertSame(15, $contributions[0]->getClientAmount());
-        self::assertSame(35, $contributions[0]->getAmount());
+        self::assertSame(10, $contributions[0]->getClientAmount());
+        self::assertSame(20, $contributions[0]->getAlphaFordAmount());
+        self::assertSame(30, $contributions[0]->getAmount());
     }
 
     public function testCashierCashesInAConfirmedReservationFromTheList(): void
@@ -170,7 +173,7 @@ final class ReservationManagementTest extends WebTestCase
         $this->loginAs(['ROLE_CASHIER']);
 
         $crawler = $this->client->request('GET', '/admin/reservation');
-        $this->client->submit($crawler->filter('form.dp-validate-test-drive')->form(['amount' => '30']));
+        $this->client->submit($crawler->filter('form.dp-validate-test-drive')->form());
 
         self::assertResponseRedirects('/admin/reservation');
         self::assertTrue($this->reload($reservation)->isTestDriveCompleted());
@@ -184,7 +187,7 @@ final class ReservationManagementTest extends WebTestCase
 
         $crawler = $this->client->request('GET', '/admin/reservation');
         $form = $crawler->filter('form.dp-row-action--confirmAndCashIn');
-        self::assertSame('30', $form->filter('input[name="amount"]')->attr('value'), '10 DT client + 20 DT Alpha Ford by default.');
+        self::assertCount(0, $form->filter('input[name="amount"]'), 'The amount is fixed.');
         $this->client->submit($form->form());
         $this->client->followRedirect();
 
@@ -195,7 +198,7 @@ final class ReservationManagementTest extends WebTestCase
         self::assertSame(30, $this->contributions()[0]->getAmount());
     }
 
-    public function testCashierCustomAmountIncrementsTheCagnotteAndItsHistory(): void
+    public function testCashInIncrementsTheCagnotteAndItsHistory(): void
     {
         $reservation = $this->createBooking(Experience::EverestRanger, '2026-10-01', Vehicle::RangerRaptor, '09:00')->setFullName('Sarra Ben Ali');
         $this->entityManager()->flush();
@@ -204,32 +207,20 @@ final class ReservationManagementTest extends WebTestCase
         $this->loginAs(['ROLE_CASHIER']);
 
         $crawler = $this->client->request('GET', '/admin/reservation');
-        $this->client->submit($crawler->filter('form.dp-row-action--confirmAndCashIn')->form(['amount' => '50']));
+        // An amount sent anyway is ignored.
+        $token = $crawler->filter('form.dp-row-action--confirmAndCashIn input[name="_token"]')->attr('value');
+        $this->client->request('POST', sprintf('/admin/reservation/%d/confirmer', $reservation->getId()), ['_token' => $token, 'cash_in' => '1', 'amount' => '50']);
         $crawler = $this->client->followRedirect();
 
-        self::assertSame('+50 DT', $crawler->filter('template[data-toast]')->attr('data-badge'));
-        self::assertSame($before + 50, $fund->total());
-        self::assertSame(30, $this->contributions()[0]->getClientAmount());
+        self::assertSame('+30 DT', $crawler->filter('template[data-toast]')->attr('data-badge'));
+        self::assertSame($before + 30, $fund->total());
+        self::assertSame(10, $this->contributions()[0]->getClientAmount());
         self::assertSame(20, $this->contributions()[0]->getAlphaFordAmount());
 
         $crawler = $this->client->request('GET', '/admin/cagnotte');
         $row = $crawler->filter('table.datagrid tbody tr')->first()->text();
         self::assertStringContainsString('Test drive : Sarra Ben Ali', $row);
-        self::assertStringContainsString('50', $row);
-    }
-
-    public function testCashierCannotCashInLessThanAlphaFordShare(): void
-    {
-        $reservation = $this->createBooking(Experience::EverestRanger, '2026-10-01', Vehicle::RangerRaptor, '09:00');
-        $this->loginAs(['ROLE_CASHIER']);
-
-        $crawler = $this->client->request('GET', '/admin/reservation');
-        $this->client->submit($crawler->filter('form.dp-row-action--confirmAndCashIn')->form(['amount' => '15']));
-        $this->client->followRedirect();
-
-        self::assertSelectorTextContains('.alert-danger', 'montant reçu');
-        self::assertSame(ReservationStatus::Pending, $this->reload($reservation)->getStatus());
-        self::assertCount(0, $this->contributions());
+        self::assertStringContainsString('30', $row);
     }
 
     public function testCashierCanOnlyViewAndValidate(): void
@@ -260,10 +251,10 @@ final class ReservationManagementTest extends WebTestCase
         $this->loginAs(['ROLE_RESERVATIONS']);
 
         $crawler = $this->client->request('GET', '/admin/reservation');
-        self::assertCount(0, $crawler->filter('input[name="amount"]'));
+        self::assertCount(0, $crawler->filter('input[name="cash_in"]'));
         $token = $crawler->filter('form.dp-row-action--confirmReservation input[name="_token"]')->attr('value');
 
-        $this->client->request('POST', sprintf('/admin/reservation/%d/confirmer', $reservation->getId()), ['_token' => $token, 'amount' => '30']);
+        $this->client->request('POST', sprintf('/admin/reservation/%d/confirmer', $reservation->getId()), ['_token' => $token, 'cash_in' => '1']);
         self::assertResponseStatusCodeSame(403);
         self::assertSame(ReservationStatus::Pending, $this->reload($reservation)->getStatus());
         self::assertCount(0, $this->contributions());

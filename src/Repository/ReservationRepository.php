@@ -98,6 +98,45 @@ class ReservationRepository extends ServiceEntityRepository
     }
 
     /**
+     * The latest registration made with this e-mail (any experience or status), or null.
+     */
+    public function findLatestByEmail(string $email): ?Reservation
+    {
+        return $this->createQueryBuilder('r')
+            ->andWhere('r.email = :email')
+            ->setParameter('email', mb_strtolower(trim($email)))
+            ->orderBy('r.createdAt', 'DESC')
+            ->addOrderBy('r.id', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
+     * Every e-mail used to register, once, with the name and phone given on the latest registration.
+     *
+     * @return array<string, array{fullName: string, phone: string}> by e-mail, sorted by e-mail
+     */
+    public function registeredEmails(): array
+    {
+        /** @var list<array{email: string, fullName: string, phone: string}> $rows */
+        $rows = $this->createQueryBuilder('r')
+            ->select('r.email', 'r.fullName', 'r.phone')
+            ->orderBy('r.createdAt', 'DESC')
+            ->addOrderBy('r.id', 'DESC')
+            ->getQuery()
+            ->getArrayResult();
+
+        $registered = [];
+        foreach ($rows as $row) {
+            $registered[$row['email']] ??= ['fullName' => $row['fullName'], 'phone' => $row['phone']];
+        }
+        ksort($registered);
+
+        return $registered;
+    }
+
+    /**
      * Listing for the back-office, ordered by event date then slot.
      */
     public function createBackOfficeQueryBuilder(?Experience $experience = null): QueryBuilder

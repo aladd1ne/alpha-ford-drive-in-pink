@@ -154,3 +154,40 @@
 .datagrid td.actions > :first-child { margin-left: 0; }
 .datagrid td.actions .btn,
 .dp-row-action .btn { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; line-height: 1.4; overflow: visible; }
+
+/* Donor picker of the "Ajouter à la cagnotte" page (templates/admin/fund/add.html.twig) */
+.dp-donor-picker__list {
+    max-height: 240px;
+    overflow-y: auto;
+    margin: 6px 0 0;
+    padding: 4px;
+    list-style: none;
+    border: 1px solid #EBDDE3;
+    border-radius: 8px;
+}
+.dp-donor-picker__list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.dp-donor-picker__list li:hover,
+.dp-donor-picker__list li:focus { background: #FCE3EC; outline: none; }
+.dp-donor-picker__person { display: flex; flex-direction: column; min-width: 0; }
+.dp-donor-picker__name { font-weight: 600; color: #211419; }
+.dp-donor-picker__email { font-size: 13px; color: #6E5160; overflow-wrap: anywhere; }
+.dp-donor-picker__phone { color: #6E5160; white-space: nowrap; align-self: center; }
+.dp-donor-picker__selected {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: #FCE3EC;
+    color: #211419;
+    font-weight: 600;
+}
+.dp-donor-picker__selected .btn { margin-left: auto; }
+.dp-donor-picker__empty { margin: 6px 0 0; font-size: 13px; color: #6E5160; }
