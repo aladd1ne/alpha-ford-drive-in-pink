@@ -17,7 +17,8 @@ use Doctrine\ORM\Mapping as ORM;
  * someone who registered on the site (see donation(), the donor), or the sale of products
  * for the cause to someone registered (see productSale(), the amount is the product price
  * times the quantity, the buyer is kept as donor),
- * with an optional note. Older ones have a note only (see manual()).
+ * with an optional note. A donor or buyer not registered on the site is kept by name, phone
+ * and optional e-mail instead (see UnregisteredDonor). Older ones have a note only (see manual()).
  *
  * An admin can correct the amounts afterwards (see correctTestDrive() and correctManual()):
  * the last correction is kept (who, when, why) next to the original validation.
@@ -65,6 +66,16 @@ class FundContribution
     #[ORM\ManyToOne(targetEntity: Reservation::class)]
     #[ORM\JoinColumn(nullable: true)]
     private ?Reservation $donor = null;
+
+    /** Donor or buyer not registered on the site (no $donor): the details typed by hand. */
+    #[ORM\Column(length: 120, nullable: true)]
+    private ?string $donorName = null;
+
+    #[ORM\Column(length: 30, nullable: true)]
+    private ?string $donorPhone = null;
+
+    #[ORM\Column(length: 180, nullable: true)]
+    private ?string $donorEmail = null;
 
     #[ORM\ManyToOne(targetEntity: Product::class)]
     #[ORM\JoinColumn(nullable: true)]
@@ -128,21 +139,21 @@ class FundContribution
     }
 
     /**
-     * Donation from someone who registered on the site.
+     * Donation from someone who registered on the site, or not.
      */
-    public static function donation(Reservation $donor, int $amount, ?string $note, \DateTimeImmutable $at, string $addedBy): self
+    public static function donation(Reservation|UnregisteredDonor $donor, int $amount, ?string $note, \DateTimeImmutable $at, string $addedBy): self
     {
         $contribution = self::manual($amount, $note, $at, $addedBy, ContributionSource::Donation);
-        $contribution->donor = $donor;
+        $contribution->setDonor($donor);
 
         return $contribution;
     }
 
     /**
-     * Sale of products for the cause to a registered person: the amount is the current
+     * Sale of products for the cause to a person, registered or not: the amount is the current
      * product price times the quantity.
      */
-    public static function productSale(Reservation $buyer, Product $product, int $quantity, ?string $note, \DateTimeImmutable $at, string $addedBy): self
+    public static function productSale(Reservation|UnregisteredDonor $buyer, Product $product, int $quantity, ?string $note, \DateTimeImmutable $at, string $addedBy): self
     {
         if ($quantity <= 0) {
             throw new \InvalidArgumentException('The quantity must be positive.');
@@ -150,11 +161,24 @@ class FundContribution
 
         // A product given away (price 0) is still recorded, for 0 DT.
         $contribution = self::addedByHand($product->getPrice() * $quantity, $note, $at, $addedBy, ContributionSource::Product);
-        $contribution->donor = $buyer;
+        $contribution->setDonor($buyer);
         $contribution->product = $product;
         $contribution->quantity = $quantity;
 
         return $contribution;
+    }
+
+    private function setDonor(Reservation|UnregisteredDonor $donor): void
+    {
+        if ($donor instanceof Reservation) {
+            $this->donor = $donor;
+
+            return;
+        }
+
+        $this->donorName = $donor->fullName;
+        $this->donorPhone = $donor->phone;
+        $this->donorEmail = $donor->email;
     }
 
     /**
@@ -248,6 +272,21 @@ class FundContribution
         return $this->donor;
     }
 
+    public function getDonorName(): ?string
+    {
+        return $this->donorName;
+    }
+
+    public function getDonorPhone(): ?string
+    {
+        return $this->donorPhone;
+    }
+
+    public function getDonorEmail(): ?string
+    {
+        return $this->donorEmail;
+    }
+
     public function getProduct(): ?Product
     {
         return $this->product;
@@ -260,7 +299,7 @@ class FundContribution
 
     /**
      * Where the amount comes from, as shown in the back-office: "Test drive : <client>",
-     * "Don : <donor name> (<e-mail>) : <note>",
+     * "Don : <donor name> (<e-mail>) : <note>" (a donor not registered: "(<e-mail or phone>, non inscrit)"),
      * "Achat d’un produit : <product> × <quantity> — <buyer name> (<e-mail>) : <note>"
      * or the note alone (older manual amounts).
      */
@@ -270,7 +309,11 @@ class FundContribution
             return sprintf('Test drive : %s', $this->reservation?->getFullName());
         }
 
-        $person = null === $this->donor ? null : sprintf('%s (%s)', $this->donor->getFullName(), $this->donor->getEmail());
+        $person = match (true) {
+            null !== $this->donor => sprintf('%s (%s)', $this->donor->getFullName(), $this->donor->getEmail()),
+            null !== $this->donorName => sprintf('%s (%s, non inscrit)', $this->donorName, $this->donorEmail ?? $this->donorPhone),
+            default => null,
+        };
         $detail = null === $this->product
             ? $person
             : implode(' — ', array_filter([sprintf('%s × %d', $this->product->getName(), $this->quantity), $person]));
