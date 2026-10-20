@@ -51,7 +51,7 @@ class DashboardController extends AbstractDashboardController
 
     /**
      * Every profile: adds an amount to the cagnotte outside any test drive: a donation from
-     * someone registered on the site, or the sale of products (price × quantity). Declared on the dashboard so it gets the
+     * someone registered on the site or not, or the sale of products (price × quantity). Declared on the dashboard so it gets the
      * back-office layout without the cashier-only cagnotte history.
      */
     #[Route('/admin/ajouter-a-la-cagnotte', name: self::ADD_TO_FUND_ROUTE, methods: ['GET', 'POST'])]
@@ -63,9 +63,10 @@ class DashboardController extends AbstractDashboardController
         if ($form->isSubmitted() && $form->isValid()) {
             $data = $form->getData();
             $by = $this->getUser()?->getUserIdentifier() ?? 'inconnu';
+            $donor = FundContributionType::donor($data);
             $contribution = ContributionSource::Product === $data['source']
-                ? FundContribution::productSale($data['donor'], $data['product'], (int) $data['quantity'], $data['note'] ?? null, $this->clock->now(), $by)
-                : FundContribution::donation($data['donor'], (int) $data['amount'], $data['note'] ?? null, $this->clock->now(), $by);
+                ? FundContribution::productSale($donor, $data['product'], (int) $data['quantity'], $data['note'] ?? null, $this->clock->now(), $by)
+                : FundContribution::donation($donor, (int) $data['amount'], $data['note'] ?? null, $this->clock->now(), $by);
             $this->entityManager->persist($contribution);
             $this->entityManager->flush();
 
