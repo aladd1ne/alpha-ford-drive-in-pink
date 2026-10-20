@@ -107,6 +107,76 @@ final class FundContributionControllerTest extends WebTestCase
         self::assertCount(0, $this->entityManager()->getRepository(FundContribution::class)->findAll());
     }
 
+    public function testADonationFromSomeoneNotRegisteredCreditsTheCagnotte(): void
+    {
+        $em = $this->entityManager();
+        $em->persist(FundContribution::manual(100, 'Ouverture', new \DateTimeImmutable(), 'caisse@alphaford.tn'));
+        $em->flush();
+        $this->loginAs(['ROLE_CASHIER']);
+
+        $this->client->request('GET', '/admin/ajouter-a-la-cagnotte');
+        $this->client->submitForm('Ajouter', [
+            'fund_contribution[source]' => ContributionSource::Donation->value,
+            'fund_contribution[newDonor]' => '1',
+            'fund_contribution[donorName]' => ' Sami Trabelsi ',
+            'fund_contribution[donorPhone]' => '+216 22 333 444',
+            'fund_contribution[donorEmail]' => 'Sami@Example.com',
+            'fund_contribution[amount]' => '50',
+        ]);
+
+        self::assertResponseRedirects('/admin/ajouter-a-la-cagnotte');
+        $crawler = $this->client->followRedirect();
+        $toast = $crawler->filter('template[data-toast]');
+        self::assertSame('+50 DT', $toast->attr('data-badge'));
+        self::assertStringContainsString('Nouveau total de la cagnotte : 150 DT', $toast->html());
+        self::assertSelectorTextContains('table', 'Don : Sami Trabelsi (sami@example.com, non inscrit)');
+
+        $contribution = $em->getRepository(FundContribution::class)->findOneBy(['source' => ContributionSource::Donation]);
+        self::assertNull($contribution->getDonor());
+        self::assertSame('Sami Trabelsi', $contribution->getDonorName());
+        self::assertSame('+216 22 333 444', $contribution->getDonorPhone());
+        self::assertSame('sami@example.com', $contribution->getDonorEmail());
+    }
+
+    public function testAProductSaleToSomeoneNotRegisteredNeedsANameAndAPhone(): void
+    {
+        $em = $this->entityManager();
+        $em->persist($product = (new Product())->setName('T-shirt Drive in Pink')->setPrice(25));
+        $em->flush();
+        $this->loginAs(['ROLE_CASHIER']);
+
+        $this->client->request('GET', '/admin/ajouter-a-la-cagnotte');
+        $this->client->submitForm('Ajouter', [
+            'fund_contribution[source]' => ContributionSource::Product->value,
+            'fund_contribution[newDonor]' => '1',
+            'fund_contribution[donorName]' => '',
+            'fund_contribution[donorPhone]' => 'abc',
+            'fund_contribution[product]' => (string) $product->getId(),
+            'fund_contribution[quantity]' => '2',
+        ]);
+        self::assertResponseStatusCodeSame(422);
+        self::assertSelectorTextContains('form', 'Veuillez saisir le nom et prénom.');
+        self::assertSelectorTextContains('form', 'Numéro de téléphone invalide.');
+        self::assertCount(0, $em->getRepository(FundContribution::class)->findAll());
+
+        $this->client->submitForm('Ajouter', [
+            'fund_contribution[source]' => ContributionSource::Product->value,
+            'fund_contribution[newDonor]' => '1',
+            'fund_contribution[donorName]' => 'Sami Trabelsi',
+            'fund_contribution[donorPhone]' => '22 333 444',
+            'fund_contribution[donorEmail]' => '',
+            'fund_contribution[product]' => (string) $product->getId(),
+            'fund_contribution[quantity]' => '2',
+        ]);
+        self::assertResponseRedirects();
+        $this->client->followRedirect();
+        self::assertSelectorTextContains('table', 'Achat d’un produit : T-shirt Drive in Pink × 2 — Sami Trabelsi (22 333 444, non inscrit)');
+
+        $contribution = $em->getRepository(FundContribution::class)->findOneBy([]);
+        self::assertSame(50, $contribution->getAmount());
+        self::assertNull($contribution->getDonorEmail());
+    }
+
     public function testAProductSaleCreditsItsPriceTimesTheQuantity(): void
     {
         $buyer = $this->createBooking(Experience::Territory, '2026-10-01', Vehicle::Territory, '09:00')

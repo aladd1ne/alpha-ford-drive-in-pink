@@ -4,7 +4,7 @@
 {% block page_title %}Ajouter à la cagnotte{% endblock %}
 
 {% block main %}
-    <p class="text-muted">Un don d’une personne inscrite sur le site ou la vente d’un produit pour la cause. Cagnotte actuelle : <strong>{{ total|number_format(0, ',', ' ') }} DT</strong> ; le montant ajouté apparaît tout de suite sur le site, dans « autres contributions ».</p>
+    <p class="text-muted">Un don d’une personne, inscrite sur le site ou non, ou la vente d’un produit pour la cause. Cagnotte actuelle : <strong>{{ total|number_format(0, ',', ' ') }} DT</strong> ; le montant ajouté apparaît tout de suite sur le site, dans « autres contributions ».</p>
 
     <div class="card" style="max-width: 640px">
         <div class="card-body">
@@ -12,7 +12,9 @@
                 {{ form_errors(form) }}
                 {{ form_row(form.source) }}
                 {# Donor or buyer: a search bar filtering the registered people (by name, phone or e-mail),
-                   a click on one fills the hidden donor field. Used by both sources. #}
+                   a click on one fills the hidden donor field. Used by both sources. Someone not
+                   registered is typed by hand instead ("newDonor" checked). #}
+                {{ form_row(form.newDonor) }}
                 <div class="mb-3 dp-donor-picker" data-donor-picker>
                     <label class="form-label" for="dp-donor-search">Client (e-mail d’inscription)</label>
                     {{ form_widget(form.donor) }}
@@ -36,6 +38,11 @@
                     <p class="dp-donor-picker__empty" data-donor-empty hidden>Aucune inscription ne correspond.</p>
                     <div class="invalid-feedback d-block">{{ form_errors(form.donor) }}</div>
                     <div class="form-text">{{ donors|length }} personne{{ donors|length > 1 ? 's' : '' }} inscrite{{ donors|length > 1 ? 's' : '' }} sur le site.</div>
+                </div>
+                <div data-new-donor-fields>
+                    {{ form_row(form.donorName) }}
+                    {{ form_row(form.donorPhone) }}
+                    {{ form_row(form.donorEmail) }}
                 </div>
                 <div data-fund-fields="{{ constant('App\\Enum\\ContributionSource::Donation').value }}">
                     {{ form_row(form.amount) }}
@@ -104,6 +111,16 @@
             const selected = picker.querySelector('[data-donor-selected]');
             const empty = picker.querySelector('[data-donor-empty]');
 
+            // Someone not registered: the picker gives way to the name, phone and e-mail fields.
+            const newDonor = form.querySelector('[data-new-donor-toggle]');
+            const newDonorFields = form.querySelector('[data-new-donor-fields]');
+            const showNewDonor = () => {
+                picker.hidden = newDonor.checked;
+                donor.disabled = newDonor.checked;
+                newDonorFields.hidden = !newDonor.checked;
+                newDonorFields.querySelectorAll('input').forEach((field) => { field.disabled = !newDonor.checked; });
+            };
+
             const filterDonors = () => {
                 const query = search.value.trim().toLowerCase().replace(/^\+|(?<=\d)[\s.\-]+(?=\d)/g, '');
                 let shown = 0;
@@ -162,6 +179,8 @@
             search.blur();
 
             form.addEventListener('change', showSource);
+            newDonor.addEventListener('change', showNewDonor);
+            showNewDonor();
             product.addEventListener('change', showTotal);
             quantity.addEventListener('input', showTotal);
             showSource();
