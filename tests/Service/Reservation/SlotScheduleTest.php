@@ -103,7 +103,7 @@ final class SlotScheduleTest extends KernelTestCase
     public function testCapacityIsConfigured(): void
     {
         self::assertSame(1, $this->schedule->capacity(Experience::EverestRanger));
-        self::assertSame(1, $this->schedule->capacity(Experience::Territory));
+        self::assertSame(3, $this->schedule->capacity(Experience::Territory));
         self::assertSame(0, $this->schedule->capacity(Experience::October));
     }
 }

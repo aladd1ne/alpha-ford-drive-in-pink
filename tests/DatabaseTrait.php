@@ -72,7 +72,7 @@ trait DatabaseTrait
     }
 
     /**
-     * Books every slot of an experience for every vehicle, except the ones listed as "Y-m-d|HH:MM".
+     * Books every seat of every slot of an experience for every vehicle, except the slots listed as "Y-m-d|HH:MM".
      *
      * @param list<string> $except
      */
@@ -80,6 +80,7 @@ trait DatabaseTrait
     {
         $schedule = static::getContainer()->get(\App\Service\Reservation\SlotSchedule::class);
         $em = $this->entityManager();
+        $capacity = $schedule->capacity($experience);
 
         foreach ($schedule->dates($experience) as $date) {
             foreach (array_keys($schedule->slotsFor($experience, $date)) as $slot) {
@@ -87,14 +88,16 @@ trait DatabaseTrait
                     continue;
                 }
                 foreach ($experience->vehicles() as $vehicle) {
-                    $em->persist((new Reservation($experience))
-                        ->setFullName('Client Test')
-                        ->setPhone('+216 20 000 000')
-                        ->setEmail('client@example.com')
-                        ->setDate($date)
-                        ->setVehicle($vehicle)
-                        ->setSlot($slot)
-                        ->assignSeat(1));
+                    foreach (range(1, $capacity) as $seat) {
+                        $em->persist((new Reservation($experience))
+                            ->setFullName('Client Test')
+                            ->setPhone('+216 20 000 000')
+                            ->setEmail('client@example.com')
+                            ->setDate($date)
+                            ->setVehicle($vehicle)
+                            ->setSlot($slot)
+                            ->assignSeat($seat));
+                    }
                 }
             }
         }
