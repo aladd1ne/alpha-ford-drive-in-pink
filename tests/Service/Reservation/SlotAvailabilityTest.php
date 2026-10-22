@@ -42,8 +42,19 @@ final class SlotAvailabilityTest extends KernelTestCase
     {
         $this->createBooking(Experience::Territory, '2026-10-23', Vehicle::Territory, '09:00');
 
-        self::assertSame(0, $this->availability->remaining(Experience::Territory, new \DateTimeImmutable('2026-10-23'), Vehicle::Territory, '09:00'));
-        self::assertSame(1, $this->availability->remaining(Experience::Territory, new \DateTimeImmutable('2026-10-24'), Vehicle::Territory, '09:00'));
+        self::assertSame(2, $this->availability->remaining(Experience::Territory, new \DateTimeImmutable('2026-10-23'), Vehicle::Territory, '09:00'));
+        self::assertSame(3, $this->availability->remaining(Experience::Territory, new \DateTimeImmutable('2026-10-24'), Vehicle::Territory, '09:00'));
+    }
+
+    public function testTerritorySlotAcceptsThreeBookings(): void
+    {
+        $friday = new \DateTimeImmutable('2026-10-23');
+        $this->createBooking(Experience::Territory, '2026-10-23', Vehicle::Territory, '09:00');
+        $this->createBooking(Experience::Territory, '2026-10-23', Vehicle::Territory, '09:00', seat: 2);
+        self::assertSame(1, $this->availability->remaining(Experience::Territory, $friday, Vehicle::Territory, '09:00'));
+
+        $this->createBooking(Experience::Territory, '2026-10-23', Vehicle::Territory, '09:00', seat: 3);
+        self::assertSame(0, $this->availability->remaining(Experience::Territory, $friday, Vehicle::Territory, '09:00'));
     }
 
     public function testSlotsAfterClosingTimeAreNotOffered(): void
@@ -60,7 +71,9 @@ final class SlotAvailabilityTest extends KernelTestCase
         $this->fillExperience(Experience::Territory, except: ['2026-10-24|12:00']);
         self::assertFalse($this->availability->isFull(Experience::Territory));
 
-        $this->createBooking(Experience::Territory, '2026-10-24', Vehicle::Territory, '12:00');
+        foreach ([1, 2, 3] as $seat) {
+            $this->createBooking(Experience::Territory, '2026-10-24', Vehicle::Territory, '12:00', seat: $seat);
+        }
         self::assertTrue($this->availability->isFull(Experience::Territory));
 
         // The other experiences are not affected.
